@@ -394,6 +394,30 @@ export class FrameRenderer {
 		// Composite with shadows to final output canvas
 		this.compositeWithShadows(webcamFrame);
 
+		// Render blur masks (needs to be before renderAnnotations to access composed canvas)
+		if (
+			this.config.annotationRegions &&
+			this.config.annotationRegions.length > 0 &&
+			this.compositeCtx
+		) {
+			const activeBlurAnnotations = this.config.annotationRegions.filter(
+				(ann) =>
+					ann.type === "blur" &&
+					ann.blurData &&
+					timeMs >= ann.startMs &&
+					timeMs < ann.endMs,
+			);
+
+			for (const blurAnnotation of activeBlurAnnotations) {
+				this.renderBlurMask(
+					this.compositeCtx,
+					blurAnnotation,
+					this.config.width,
+					this.config.height,
+				);
+			}
+		}
+
 		// Render annotations on top if present
 		if (
 			this.config.annotationRegions &&
@@ -460,6 +484,121 @@ export class FrameRenderer {
 		// Inner rectangle (highlight window - creates cutout with evenodd)
 		ctx.rect(x, y, width, height);
 		ctx.fill("evenodd");
+	}
+
+	/**
+	 * Renders a blur mask on the canvas.
+	 * Uses temporary canvas for blur processing with feathering support.
+	 */
+	private renderBlurMask(
+		ctx: CanvasRenderingContext2D,
+		annotation: AnnotationRegion,
+		canvasWidth: number,
+		canvasHeight: number,
+	): void {
+		const { position, size, blurData } = annotation;
+		if (!blurData) return;
+
+		const x = (position.x / 100) * canvasWidth;
+		const y = (position.y / 100) * canvasHeight;
+		const width = (size.width / 100) * canvasWidth;
+		const height = (size.height / 100) * canvasHeight;
+		const { effectType, intensity, feathering, solidColor } = blurData;
+
+		// 保存当前画布状态
+		ctx.save();
+
+		// 创建临时画布用于模糊处理
+		const tempCanvas = document.createElement("canvas");
+		tempCanvas.width = canvasWidth;
+		tempCanvas.height = canvasHeight;
+		const tempCtx = tempCanvas.getContext("2d")!;
+		tempCtx.drawImage(ctx.canvas, 0, 0);
+
+		// 创建模糊区域画布
+		const blurCanvas = document.createElement("canvas");
+		blurCanvas.width = Math.ceil(width);
+		blurCanvas.height = Math.ceil(height);
+		const blurCtx = blurCanvas.getContext("2d")!;
+
+		// 从临时画布复制模糊区域内容
+		blurCtx.drawImage(tempCanvas, -x, -y);
+
+		// 根据类型应用模糊效果
+		switch (effectType) {
+			case "gaussian":
+				blurCtx.filter = `blur(${intensity}px)`;
+				blurCtx.drawImage(blurCanvas, 0, 0);
+				blurCtx.filter = "none";
+				break;
+
+			case "solid":
+				blurCtx.fillStyle = solidColor;
+				blurCtx.fillRect(0, 0, width, height);
+				break;
+
+			case "heavy":
+				blurCtx.filter = `blur(${intensity * 1.5}px) saturate(0.3)`;
+				blurCtx.drawImage(blurCanvas, 0, 0);
+				blurCtx.filter = "none";
+				break;
+		}
+
+		// 应用羽化遮罩（使用与预览一致的线性渐变方法）
+		if (feathering > 0) {
+			const feather = Math.min(feathering, Math.min(width, height) / 2);
+
+			// 创建羽化遮罩画布
+			const maskCanvas = document.createElement("canvas");
+			maskCanvas.width = Math.ceil(width);
+			maskCanvas.height = Math.ceil(height);
+			const maskCtx = maskCanvas.getContext("2d")!;
+
+			// 填充白色基础
+			maskCtx.fillStyle = "white";
+			maskCtx.fillRect(0, 0, width, height);
+
+			// 四边渐变（模拟 CSS linear-gradient 的效果）
+			maskCtx.globalCompositeOperation = "destination-out";
+
+			// 左边渐变
+			const leftGradient = maskCtx.createLinearGradient(0, 0, feather, 0);
+			leftGradient.addColorStop(0, "rgba(0,0,0,1)");
+			leftGradient.addColorStop(1, "rgba(0,0,0,0)");
+			maskCtx.fillStyle = leftGradient;
+			maskCtx.fillRect(0, 0, feather, height);
+
+			// 右边渐变
+			const rightGradient = maskCtx.createLinearGradient(width - feather, 0, width, 0);
+			rightGradient.addColorStop(0, "rgba(0,0,0,0)");
+			rightGradient.addColorStop(1, "rgba(0,0,0,1)");
+			maskCtx.fillStyle = rightGradient;
+			maskCtx.fillRect(width - feather, 0, feather, height);
+
+			// 上边渐变
+			const topGradient = maskCtx.createLinearGradient(0, 0, 0, feather);
+			topGradient.addColorStop(0, "rgba(0,0,0,1)");
+			topGradient.addColorStop(1, "rgba(0,0,0,0)");
+			maskCtx.fillStyle = topGradient;
+			maskCtx.fillRect(0, 0, width, feather);
+
+			// 下边渐变
+			const bottomGradient = maskCtx.createLinearGradient(0, height - feather, 0, height);
+			bottomGradient.addColorStop(0, "rgba(0,0,0,0)");
+			bottomGradient.addColorStop(1, "rgba(0,0,0,1)");
+			maskCtx.fillStyle = bottomGradient;
+			maskCtx.fillRect(0, height - feather, width, feather);
+
+			// 应用遮罩到模糊区域
+			blurCtx.globalCompositeOperation = "destination-in";
+			blurCtx.drawImage(maskCanvas, 0, 0);
+			blurCtx.globalCompositeOperation = "source-over";
+		}
+
+		// 将处理后的模糊区域绘制回主画布
+		ctx.drawImage(blurCanvas, x, y);
+
+		ctx.restore();
 	}
 
 	private updateLayout(webcamFrame?: VideoFrame | null): void {
