@@ -18,8 +18,16 @@ ipcMain.on("hud-overlay-hide", () => {
 });
 
 export function createHudOverlayWindow(): BrowserWindow {
-	const primaryDisplay = screen.getPrimaryDisplay();
-	const workArea = primaryDisplay?.workArea ?? { x: 0, y: 0, width: 1920, height: 1080 };
+	// Use try-catch for screen operations in case they fail in headless environments
+	let workArea = { x: 0, y: 0, width: 1920, height: 1080 };
+	try {
+		const primaryDisplay = screen.getPrimaryDisplay();
+		if (primaryDisplay?.workArea) {
+			workArea = primaryDisplay.workArea;
+		}
+	} catch (error) {
+		console.error("Failed to get primary display, using defaults:", error);
+	}
 
 	const windowWidth = 500;
 	const windowHeight = 155;

@@ -220,7 +220,10 @@ function getTrayIcon(filename: string) {
 }
 
 function updateTrayMenu(recording: boolean = false) {
-	if (!tray) return;
+	if (!tray) {
+		// Tray not available (HEADLESS mode or creation failed)
+		return;
+	}
 	const trayIcon = recording ? recordingTrayIcon : defaultTrayIcon;
 	const trayToolTip = recording ? `Recording: ${selectedSourceName}` : "OpenScreen";
 	const menuTemplate = recording
@@ -350,56 +353,68 @@ app.on("activate", () => {
 	}
 });
 
+// HEADLESS mode is used in CI environments where we don't need tray functionality
+const HEADLESS = process.env["HEADLESS"] === "true";
+
 // Register all IPC handlers when app is ready
 app.whenReady().then(async () => {
-	// Allow microphone/media permission checks
-	session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
-		const allowed = ["media", "audioCapture", "microphone", "videoCapture", "camera"];
-		return allowed.includes(permission);
-	});
+	try {
+		// Allow microphone/media permission checks
+		session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+			const allowed = ["media", "audioCapture", "microphone", "videoCapture", "camera"];
+			return allowed.includes(permission);
+		});
 
-	session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-		const allowed = ["media", "audioCapture", "microphone", "videoCapture", "camera"];
-		callback(allowed.includes(permission));
-	});
+		session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+			const allowed = ["media", "audioCapture", "microphone", "videoCapture", "camera"];
+			callback(allowed.includes(permission));
+		});
 
-	// Request microphone permission from macOS
-	if (process.platform === "darwin") {
-		const micStatus = systemPreferences.getMediaAccessStatus("microphone");
-		if (micStatus !== "granted") {
-			await systemPreferences.askForMediaAccess("microphone");
-		}
-	}
-
-	// Listen for HUD overlay quit event (macOS only)
-	ipcMain.on("hud-overlay-close", () => {
-		app.quit();
-	});
-	ipcMain.handle("set-locale", (_, locale: string) => {
-		setMainLocale(locale);
-		setupApplicationMenu();
-		updateTrayMenu();
-	});
-
-	createTray();
-	updateTrayMenu();
-	setupApplicationMenu();
-	// Ensure recordings directory exists
-	await ensureRecordingsDir();
-
-	registerIpcHandlers(
-		createEditorWindowWrapper,
-		createSourceSelectorWindowWrapper,
-		() => mainWindow,
-		() => sourceSelectorWindow,
-		(recording: boolean, sourceName: string) => {
-			selectedSourceName = sourceName;
-			if (!tray) createTray();
-			updateTrayMenu(recording);
-			if (!recording) {
-				showMainWindow();
+		// Request microphone permission from macOS
+		if (process.platform === "darwin") {
+			const micStatus = systemPreferences.getMediaAccessStatus("microphone");
+			if (micStatus !== "granted") {
+				await systemPreferences.askForMediaAccess("microphone");
 			}
-		},
-	);
-	createWindow();
+		}
+
+		// Listen for HUD overlay quit event (macOS only)
+		ipcMain.on("hud-overlay-close", () => {
+			app.quit();
+		});
+		ipcMain.handle("set-locale", (_, locale: string) => {
+			setMainLocale(locale);
+			setupApplicationMenu();
+			updateTrayMenu();
+		});
+
+		// Skip tray creation in headless/CI environments - tray may not work properly with xvfb
+		if (!HEADLESS) {
+			createTray();
+			updateTrayMenu();
+		}
+		setupApplicationMenu();
+		// Ensure recordings directory exists
+		await ensureRecordingsDir();
+
+		registerIpcHandlers(
+			createEditorWindowWrapper,
+			createSourceSelectorWindowWrapper,
+			() => mainWindow,
+			() => sourceSelectorWindow,
+			(recording: boolean, sourceName: string) => {
+				selectedSourceName = sourceName;
+				if (!tray && !HEADLESS) createTray();
+				updateTrayMenu(recording);
+				if (!recording) {
+					showMainWindow();
+				}
+			},
+		);
+		createWindow();
+	} catch (error) {
+		console.error("Failed to initialize app:", error);
+		// Still try to create window even if other setup failed
+		createWindow();
+	}
 });
