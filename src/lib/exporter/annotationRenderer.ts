@@ -139,23 +139,78 @@ function renderText(
 	const availableWidth = width - containerPadding * 2;
 	const rawLines = annotation.content.split("\n");
 	const lines: string[] = [];
+
+	// Check if a character is CJK (Chinese, Japanese, Korean)
+	function isCJK(char: string): boolean {
+		const code = char.codePointAt(0) ?? 0;
+		return (
+			(code >= 0x4e00 && code <= 0x9fff) || // CJK Unified Ideographs
+			(code >= 0x3400 && code <= 0x4dbf) || // CJK Unified Ideographs Extension A
+			(code >= 0x20000 && code <= 0x2a6df) || // CJK Unified Ideographs Extension B
+			(code >= 0x3000 && code <= 0x303f) || // CJK Symbols and Punctuation
+			(code >= 0xff00 && code <= 0xffef) || // Halfwidth and Fullwidth Forms
+			(code >= 0xac00 && code <= 0xd7af)
+		); // Hangul Syllables
+	}
+
+	// Word wrap function that handles both English words and CJK characters
+	function wrapText(text: string, maxWidth: number): string[] {
+		const result: string[] = [];
+
+		// Split by words (for English) while preserving spaces
+		const segments = text.split(/(\s+)/);
+		let currentLine = "";
+
+		for (const segment of segments) {
+			if (!segment) continue;
+
+			// Skip pure whitespace segments but add them to current line
+			if (/^\s+$/.test(segment)) {
+				currentLine += segment;
+				continue;
+			}
+
+			// Check if segment contains CJK characters
+			const hasCJK = [...segment].some(isCJK);
+
+			if (hasCJK) {
+				// For CJK text, break by character
+				for (const char of segment) {
+					const testLine = currentLine + char;
+					if (currentLine && ctx.measureText(testLine).width > maxWidth) {
+						result.push(currentLine.trimEnd());
+						currentLine = char;
+					} else {
+						currentLine = testLine;
+					}
+				}
+			} else {
+				// For non-CJK text (like English), treat as a word
+				const testLine = currentLine + segment;
+				if (currentLine && ctx.measureText(testLine).width > maxWidth) {
+					// Word doesn't fit, start new line
+					result.push(currentLine.trimEnd());
+					currentLine = segment;
+				} else {
+					currentLine = testLine;
+				}
+			}
+		}
+
+		if (currentLine.trim()) {
+			result.push(currentLine.trimEnd());
+		}
+
+		return result.length > 0 ? result : [""];
+	}
+
 	for (const rawLine of rawLines) {
 		if (!rawLine) {
 			lines.push("");
 			continue;
 		}
-		const words = rawLine.split(/(\s+)/);
-		let current = "";
-		for (const word of words) {
-			const test = current + word;
-			if (current && ctx.measureText(test).width > availableWidth) {
-				lines.push(current);
-				current = word.trimStart();
-			} else {
-				current = test;
-			}
-		}
-		if (current) lines.push(current);
+		const wrappedLines = wrapText(rawLine, availableWidth);
+		lines.push(...wrappedLines);
 	}
 	const lineHeight = scaledFontSize * 1.4;
 
