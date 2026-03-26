@@ -37,7 +37,7 @@ export interface TrimRegion {
 	endMs: number;
 }
 
-export type AnnotationType = "text" | "image" | "figure";
+export type AnnotationType = "text" | "image" | "figure" | "blur";
 
 export type ArrowDirection =
 	| "up"
@@ -54,6 +54,29 @@ export interface FigureData {
 	color: string;
 	strokeWidth: number;
 }
+
+// === Blur Mask Types ===
+
+export type BlurEffectType = "gaussian" | "solid" | "heavy";
+
+export interface BlurData {
+	effectType: BlurEffectType;
+	intensity: number; // 1-30
+	feathering: number; // 0-20px
+	solidColor: string; // hex color, used for "solid" type
+}
+
+export const DEFAULT_BLUR_DATA: BlurData = {
+	effectType: "gaussian",
+	intensity: 15,
+	feathering: 0,
+	solidColor: "#000000",
+};
+
+export const DEFAULT_BLUR_SIZE: AnnotationSize = {
+	width: 25,
+	height: 20,
+};
 
 export interface AnnotationPosition {
 	x: number;
@@ -89,6 +112,7 @@ export interface AnnotationRegion {
 	style: AnnotationTextStyle;
 	zIndex: number;
 	figureData?: FigureData;
+	blurData?: BlurData; // Blur mask data
 }
 
 export const DEFAULT_ANNOTATION_POSITION: AnnotationPosition = {
