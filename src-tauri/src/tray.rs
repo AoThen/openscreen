@@ -29,7 +29,7 @@ pub fn create_tray(app: &AppHandle) -> Result<TrayIcon, String> {
         .map_err(|e| e.to_string())?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)
         .map_err(|e| e.to_string())?;
-    let stop_recording_item = MenuItem::with_id(app, "stop_recording", "Stop Recording", true, None::<&str>)
+    let _stop_recording_item = MenuItem::with_id(app, "stop_recording", "Stop Recording", true, None::<&str>)
         .map_err(|e| e.to_string())?;
 
     // 构建菜单

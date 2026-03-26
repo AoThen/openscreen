@@ -47,12 +47,7 @@
       }
     },
     "macOS": {
-      "minimumSystemVersion": "10.13",
-      "info": {
-        "NSMicrophoneUsageDescription": "OpenScreen needs access to your microphone to record audio.",
-        "NSScreenCaptureUsageDescription": "OpenScreen needs access to capture your screen for recording.",
-        "NSCameraUsageDescription": "OpenScreen needs access to your camera for webcam overlay."
-      }
+      "minimumSystemVersion": "10.13"
     }
   }
 }

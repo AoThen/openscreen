@@ -2,6 +2,7 @@
 //!
 //! 提供麦克风设备枚举、权限请求等功能
 
+use cpal::traits::{DeviceTrait, HostTrait};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::Manager;
@@ -37,24 +38,27 @@ pub fn get_microphone_devices() -> Result<Vec<AudioDevice>, String> {
 		.map_err(|e| format!("Failed to get input devices: {}", e))?;
 
 	let default_input = host.default_input_device();
+	let default_input_name = default_input
+		.as_ref()
+		.and_then(|d| d.name().ok());
 
 	for (idx, device) in input_devices.enumerate() {
-		let name = device.name().unwrap_or_else(|_| format!("Microphone {}", idx + 1));
+		let device_name: String = device.name().unwrap_or_else(|_| format!("Microphone {}", idx + 1));
 
-		let is_default = default_input
+		let is_default = default_input_name
 			.as_ref()
-			.map(|d| d.name().as_deref() == Some(name.as_str()))
+			.map(|n| n == &device_name)
 			.unwrap_or(false);
 
 		let config = device.default_input_config().ok();
 
 		let (channels, sample_rate) = config
-			.map(|c| (c.channels, c.sample_rate().0))
+			.map(|c| (c.channels(), c.sample_rate().0))
 			.unwrap_or((1, 48000));
 
 		devices.push(AudioDevice {
 			device_id: format!("device_{}", idx),
-			name,
+			name: device_name,
 			is_default,
 			channels,
 			sample_rate,
@@ -92,7 +96,7 @@ pub fn check_microphone_permission() -> Result<String, String> {
 
 /// 请求麦克风权限
 #[tauri::command]
-pub async fn request_microphone_permission(app: tauri::AppHandle) -> Result<bool, String> {
+pub async fn request_microphone_permission(_app: tauri::AppHandle) -> Result<bool, String> {
 	#[cfg(target_os = "macos")]
 	{
 		// macOS 需要通过实际访问麦克风来触发权限请求
@@ -141,7 +145,7 @@ pub async fn request_microphone_permission(app: tauri::AppHandle) -> Result<bool
 
 /// 开始音频电平监听
 #[tauri::command]
-pub async fn start_audio_level_monitor(app: tauri::AppHandle, device_id: Option<String>) -> Result<(), String> {
+pub async fn start_audio_level_monitor(_app: tauri::AppHandle, _device_id: Option<String>) -> Result<(), String> {
 	// 音频电平监听通过前端 Web Audio API 实现
 	// 此命令仅作为预留接口
 	Ok(())
