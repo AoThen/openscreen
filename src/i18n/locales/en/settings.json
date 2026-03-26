@@ -125,7 +125,12 @@
 		"deco": "Deco",
 		"simple": "Simple",
 		"modern": "Modern",
-		"clean": "Clean"
+		"clean": "Clean",
+		"microsoftYaHei": "Microsoft YaHei",
+		"simSun": "SimSun",
+		"simHei": "SimHei",
+		"kaiTi": "KaiTi",
+		"fangSong": "FangSong"
 	},
 	"customFont": {
 		"dialogTitle": "Add Google Font",

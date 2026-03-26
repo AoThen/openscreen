@@ -52,6 +52,12 @@ const FONT_FAMILIES = [
 	{ value: "Arial, sans-serif", labelKey: "simple" },
 	{ value: "Verdana, sans-serif", labelKey: "modern" },
 	{ value: "Trebuchet MS, sans-serif", labelKey: "clean" },
+	// Chinese fonts
+	{ value: '"Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif', labelKey: "microsoftYaHei" },
+	{ value: '"SimSun", "宋体", "STSong", serif', labelKey: "simSun" },
+	{ value: '"SimHei", "黑体", "STHeiti", sans-serif', labelKey: "simHei" },
+	{ value: '"KaiTi", "楷体", "STKaiti", serif', labelKey: "kaiTi" },
+	{ value: '"FangSong", "仿宋", "STFangsong", serif', labelKey: "fangSong" },
 ];
 
 const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 96, 128];

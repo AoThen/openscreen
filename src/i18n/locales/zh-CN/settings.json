@@ -125,7 +125,12 @@
 		"deco": "装饰",
 		"simple": "简约",
 		"modern": "现代",
-		"clean": "简洁"
+		"clean": "简洁",
+		"microsoftYaHei": "微软雅黑",
+		"simSun": "宋体",
+		"simHei": "黑体",
+		"kaiTi": "楷体",
+		"fangSong": "仿宋"
 	},
 	"customFont": {
 		"dialogTitle": "添加 Google 字体",
