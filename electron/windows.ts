@@ -19,7 +19,7 @@ ipcMain.on("hud-overlay-hide", () => {
 
 export function createHudOverlayWindow(): BrowserWindow {
 	const primaryDisplay = screen.getPrimaryDisplay();
-	const { workArea } = primaryDisplay;
+	const workArea = primaryDisplay?.workArea ?? { x: 0, y: 0, width: 1920, height: 1080 };
 
 	const windowWidth = 500;
 	const windowHeight = 155;
@@ -37,12 +37,15 @@ export function createHudOverlayWindow(): BrowserWindow {
 		x: x,
 		y: y,
 		frame: false,
-		transparent: true,
+		// Transparent windows may not work in headless/CI environments
+		transparent: !HEADLESS,
 		resizable: false,
 		alwaysOnTop: true,
 		skipTaskbar: true,
 		hasShadow: false,
 		show: !HEADLESS,
+		// Set a background color for headless mode
+		backgroundColor: HEADLESS ? "#1a1a1c" : undefined,
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
@@ -121,7 +124,8 @@ export function createEditorWindow(): BrowserWindow {
 }
 
 export function createSourceSelectorWindow(): BrowserWindow {
-	const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+	const workAreaSize = screen.getPrimaryDisplay()?.workAreaSize ?? { width: 1920, height: 1080 };
+	const { width, height } = workAreaSize;
 
 	const win = new BrowserWindow({
 		width: 620,

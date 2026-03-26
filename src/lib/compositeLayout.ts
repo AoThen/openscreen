@@ -146,37 +146,53 @@ export function computeCompositeLayout(params: {
 
 	if (preset.transform.type === "stack") {
 		if (!webcamWidth || !webcamHeight || webcamWidth <= 0 || webcamHeight <= 0) {
-			// No webcam — screen fills the entire canvas (cover mode)
+			// No webcam — screen is centered within maxContentSize
 			return {
-				screenRect: { x: 0, y: 0, width: canvasWidth, height: canvasHeight },
+				screenRect: centerRect({ canvasSize, size: screenSize, maxSize: maxContentSize }),
 				webcamRect: null,
-				screenCover: true,
 			};
 		}
 
-		// Webcam: full width at the bottom, maintaining its aspect ratio
-		const webcamAspect = webcamWidth / webcamHeight;
-		const resolvedWebcamWidth = canvasWidth;
-		const resolvedWebcamHeight = Math.round(canvasWidth / webcamAspect);
+		// In stack mode, both screen and webcam are stacked vertically and centered
+		// Calculate the layout considering maxContentSize constraints
+		const { width: maxWidth, height: maxHeight } = maxContentSize;
 
-		// Screen: fills remaining space at the top (cover mode — may crop sides)
-		const screenRectHeight = canvasHeight - resolvedWebcamHeight;
+		// Both screen and webcam should have the same width to stack nicely
+		// Calculate scale to fit both within maxContentSize
+		const screenAspect = screenWidth / screenHeight;
+		const webcamAspect = webcamWidth / webcamHeight;
+
+		// Each element gets half the max height
+		const elementHeight = maxHeight / 2;
+
+		// Scale both to the same width (use the smaller to fit aspect ratios)
+		const screenElementWidth = elementHeight * screenAspect;
+		const webcamElementWidth = elementHeight * webcamAspect;
+		const commonWidth = Math.min(screenElementWidth, webcamElementWidth, maxWidth);
+
+		const resolvedWidth = Math.round(commonWidth);
+		const resolvedHeight = Math.round(commonWidth / screenAspect);
+
+		// Center horizontally
+		const x = Math.round((canvasWidth - resolvedWidth) / 2);
+		// Center vertically (total height is 2 * resolvedHeight)
+		const totalHeight = resolvedHeight * 2;
+		const baseY = Math.round((canvasHeight - totalHeight) / 2);
 
 		return {
 			screenRect: {
-				x: 0,
-				y: 0,
-				width: canvasWidth,
-				height: Math.max(0, screenRectHeight),
+				x,
+				y: baseY,
+				width: resolvedWidth,
+				height: resolvedHeight,
 			},
 			webcamRect: {
-				x: 0,
-				y: Math.max(0, screenRectHeight),
-				width: resolvedWebcamWidth,
-				height: resolvedWebcamHeight,
+				x,
+				y: baseY + resolvedHeight,
+				width: resolvedWidth,
+				height: resolvedHeight,
 				borderRadius: 0,
 			},
-			screenCover: true,
 		};
 	}
 
