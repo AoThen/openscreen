@@ -47,6 +47,7 @@ import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
 import type {
 	AnnotationRegion,
 	AnnotationType,
+	BlurData,
 	CropRegion,
 	FigureData,
 	HighlightRegion,
@@ -136,6 +137,7 @@ interface SettingsPanelProps {
 	onAnnotationTypeChange?: (id: string, type: AnnotationType) => void;
 	onAnnotationStyleChange?: (id: string, style: Partial<AnnotationRegion["style"]>) => void;
 	onAnnotationFigureDataChange?: (id: string, figureData: FigureData) => void;
+	onBlurDataChange?: (blurData: BlurData) => void;
 	onAnnotationDelete?: (id: string) => void;
 	onAnnotationDuplicate?: (id: string) => void;
 	onAnnotationZIndexChange?: (
@@ -214,6 +216,7 @@ export function SettingsPanel({
 	onAnnotationTypeChange,
 	onAnnotationStyleChange,
 	onAnnotationFigureDataChange,
+	onBlurDataChange,
 	onAnnotationDelete,
 	onAnnotationDuplicate,
 	onAnnotationZIndexChange,
@@ -472,6 +475,7 @@ export function SettingsPanel({
 						? (figureData) => onAnnotationFigureDataChange(selectedAnnotation.id, figureData)
 						: undefined
 				}
+				onBlurDataChange={onBlurDataChange}
 				onZIndexChange={
 					onAnnotationZIndexChange
 						? (action) => onAnnotationZIndexChange(selectedAnnotation.id, action)

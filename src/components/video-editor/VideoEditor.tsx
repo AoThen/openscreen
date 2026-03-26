@@ -42,6 +42,8 @@ import { SettingsPanel } from "./SettingsPanel";
 import TimelineEditor from "./timeline/TimelineEditor";
 import {
 	type AnnotationRegion,
+	DEFAULT_BLUR_DATA,
+	type BlurData,
 	type CursorTelemetryPoint,
 	clampDimOpacity,
 	clampFocusToDepth,
@@ -892,16 +894,32 @@ export default function VideoEditor() {
 				annotationRegions: prev.annotationRegions.map((region) => {
 					if (region.id !== id) return region;
 					const updatedRegion = { ...region, type };
-					if (type === "text") {
-						updatedRegion.content = region.textContent || "Enter text...";
-					} else if (type === "image") {
-						updatedRegion.content = region.imageContent || "";
-					} else if (type === "figure") {
-						updatedRegion.content = "";
-						if (!region.figureData) {
-							updatedRegion.figureData = { ...DEFAULT_FIGURE_DATA };
-						}
+
+					switch (type) {
+						case "text":
+							updatedRegion.content = region.textContent || "Enter text...";
+							delete updatedRegion.blurData;
+							break;
+						case "image":
+							updatedRegion.content = region.imageContent || "";
+							delete updatedRegion.blurData;
+							break;
+						case "figure":
+							updatedRegion.content = "";
+							if (!region.figureData) {
+								updatedRegion.figureData = { ...DEFAULT_FIGURE_DATA };
+							}
+							delete updatedRegion.blurData;
+							break;
+						case "blur":
+							updatedRegion.content = "";
+							if (!region.blurData) {
+								updatedRegion.blurData = { ...DEFAULT_BLUR_DATA };
+							}
+							delete updatedRegion.figureData;
+							break;
 					}
+
 					return updatedRegion;
 				}),
 			}));
@@ -925,6 +943,17 @@ export default function VideoEditor() {
 			pushState((prev) => ({
 				annotationRegions: prev.annotationRegions.map((region) =>
 					region.id === id ? { ...region, figureData } : region,
+				),
+			}));
+		},
+		[pushState],
+	);
+
+	const handleAnnotationBlurDataChange = useCallback(
+		(id: string, blurData: BlurData) => {
+			pushState((prev) => ({
+				annotationRegions: prev.annotationRegions.map((region) =>
+					region.id === id ? { ...region, blurData } : region,
 				),
 			}));
 		},
@@ -1892,6 +1921,9 @@ export default function VideoEditor() {
 						onAnnotationTypeChange={handleAnnotationTypeChange}
 						onAnnotationStyleChange={handleAnnotationStyleChange}
 						onAnnotationFigureDataChange={handleAnnotationFigureDataChange}
+						onBlurDataChange={(blurData) =>
+							selectedAnnotationId && handleAnnotationBlurDataChange(selectedAnnotationId, blurData)
+						}
 						onAnnotationDelete={handleAnnotationDelete}
 						onAnnotationDuplicate={handleAnnotationDuplicate}
 						onAnnotationZIndexChange={handleAnnotationZIndexChange}
