@@ -130,7 +130,17 @@
 		"invalidImageType": "无效的文件类型",
 		"imageFormatsOnly": "请上传 JPG、PNG、GIF 或 WebP 格式的图片文件。",
 		"imageUploadSuccess": "图片上传成功！",
-		"failedImageUpload": "上传图片失败"
+		"failedImageUpload": "上传图片失败",
+		"typeBlur": "模糊",
+		"blurType": "模糊类型",
+		"blurGaussian": "高斯模糊",
+		"blurSolid": "纯色遮挡",
+		"blurHeavy": "强力模糊",
+		"blurIntensity": "模糊强度",
+		"blurFeathering": "羽化程度",
+		"blurSolidColor": "遮挡颜色",
+		"blurTipIntensity": "值越大模糊效果越强",
+		"blurTipFeathering": "柔化模糊区域边缘"
 	},
 	"fontStyles": {
 		"classic": "经典",
