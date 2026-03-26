@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type {
 	AnnotationRegion,
 	CropRegion,
+	HighlightRegion,
 	SpeedRegion,
 	TrimRegion,
 	WebcamLayoutPreset,
@@ -22,6 +23,7 @@ export interface EditorState {
 	trimRegions: TrimRegion[];
 	speedRegions: SpeedRegion[];
 	annotationRegions: AnnotationRegion[];
+	highlightRegions: HighlightRegion[];
 	cropRegion: CropRegion;
 	wallpaper: string;
 	shadowIntensity: number;
@@ -39,6 +41,7 @@ export const INITIAL_EDITOR_STATE: EditorState = {
 	trimRegions: [],
 	speedRegions: [],
 	annotationRegions: [],
+	highlightRegions: [],
 	cropRegion: DEFAULT_CROP_REGION,
 	wallpaper: "/wallpapers/wallpaper1.jpg",
 	shadowIntensity: 0,
