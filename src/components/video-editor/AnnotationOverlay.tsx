@@ -43,6 +43,64 @@ export function AnnotationOverlay({
 		return <ArrowComponent color={color} strokeWidth={strokeWidth} />;
 	};
 
+	const renderBlurOverlay = () => {
+		const { effectType, intensity, feathering, solidColor } = annotation.blurData!;
+
+		// 羽化遮罩（使用四边渐变实现，与导出渲染一致）
+		const featherPx = `${feathering}px`;
+		const featherGradient =
+			feathering > 0
+				? `
+				linear-gradient(to right, black ${featherPx}, transparent ${featherPx}, transparent calc(100% - ${featherPx}), black calc(100% - ${featherPx})),
+				linear-gradient(to bottom, black ${featherPx}, transparent ${featherPx}, transparent calc(100% - ${featherPx}), black calc(100% - ${featherPx}))
+			`
+				: undefined;
+
+		switch (effectType) {
+			case "gaussian":
+				return (
+					<div
+						className="w-full h-full"
+						style={{
+							backdropFilter: `blur(${intensity}px)`,
+							WebkitBackdropFilter: `blur(${intensity}px)`,
+							maskImage: featherGradient,
+							WebkitMaskImage: featherGradient,
+							maskComposite: "intersect",
+							WebkitMaskComposite: "source-in",
+						}}
+					/>
+				);
+			case "solid":
+				return (
+					<div
+						className="w-full h-full"
+						style={{
+							backgroundColor: solidColor,
+							maskImage: featherGradient,
+							WebkitMaskImage: featherGradient,
+							maskComposite: "intersect",
+							WebkitMaskComposite: "source-in",
+						}}
+					/>
+				);
+			case "heavy":
+				return (
+					<div
+						className="w-full h-full"
+						style={{
+							backdropFilter: `blur(${intensity * 1.5}px) saturate(0.3)`,
+							WebkitBackdropFilter: `blur(${intensity * 1.5}px) saturate(0.3)`,
+							maskImage: featherGradient,
+							WebkitMaskImage: featherGradient,
+							maskComposite: "intersect",
+							WebkitMaskComposite: "source-in",
+						}}
+					/>
+				);
+		}
+	};
+
 	const renderContent = () => {
 		switch (annotation.type) {
 			case "text":
@@ -112,6 +170,16 @@ export function AnnotationOverlay({
 				return (
 					<div className="w-full h-full flex items-center justify-center p-2">{renderArrow()}</div>
 				);
+
+			case "blur":
+				if (!annotation.blurData) {
+					return (
+						<div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+							No blur data
+						</div>
+					);
+				}
+				return renderBlurOverlay();
 
 			default:
 				return null;
@@ -210,6 +278,7 @@ export function AnnotationOverlay({
 					annotation.type === "text" && "bg-transparent",
 					annotation.type === "image" && "bg-transparent",
 					annotation.type === "figure" && "bg-transparent",
+					annotation.type === "blur" && "bg-transparent",
 					isSelected && "shadow-lg",
 				)}
 			>
