@@ -18,6 +18,14 @@ import { createEditorWindow, createHudOverlayWindow, createSourceSelectorWindow 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Single instance lock - ensure only one instance of the app can run
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+	// Another instance is already running, quit this one
+	app.quit();
+}
+
 // Use Screen & System Audio Recording permissions instead of CoreAudio Tap API on macOS.
 // CoreAudio Tap requires NSAudioCaptureUsageDescription in the parent app's Info.plist,
 // which doesn't work when running from a terminal/IDE during development, makes my life easier
@@ -319,6 +327,12 @@ function createSourceSelectorWindowWrapper() {
 	});
 	return sourceSelectorWindow;
 }
+
+// Handle second instance - focus existing window when user tries to launch another instance
+app.on("second-instance", () => {
+	// Someone tried to run a second instance, focus the existing window
+	showMainWindow();
+});
 
 // On macOS, applications and their menu bar stay active until the user quits
 // explicitly with Cmd + Q.
