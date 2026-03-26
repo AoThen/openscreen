@@ -11,6 +11,7 @@ import { MotionBlurFilter } from "pixi-filters/motion-blur";
 import type {
 	AnnotationRegion,
 	CropRegion,
+	HighlightRegion,
 	SpeedRegion,
 	WebcamLayoutPreset,
 	ZoomDepth,
@@ -64,6 +65,7 @@ interface FrameRenderConfig {
 	webcamPosition?: { cx: number; cy: number } | null;
 	annotationRegions?: AnnotationRegion[];
 	speedRegions?: SpeedRegion[];
+	highlightRegions?: HighlightRegion[];
 	previewWidth?: number;
 	previewHeight?: number;
 }
@@ -414,6 +416,46 @@ export class FrameRenderer {
 				scaleFactor,
 			);
 		}
+
+		// Render highlight mask
+		if (this.config.highlightRegions && this.config.highlightRegions.length > 0 && this.compositeCtx) {
+			const activeHighlight = this.config.highlightRegions.find(
+				(h) => timeMs >= h.startMs && timeMs < h.endMs,
+			);
+			if (activeHighlight) {
+				this.renderHighlightMask(
+					this.compositeCtx,
+					activeHighlight,
+					this.config.width,
+					this.config.height,
+				);
+			}
+		}
+	}
+
+	/**
+	 * Renders a highlight mask with a "cutout" effect.
+	 * Uses evenodd fill rule to create a dim overlay with a transparent window.
+	 */
+	private renderHighlightMask(
+		ctx: CanvasRenderingContext2D,
+		highlight: HighlightRegion,
+		canvasWidth: number,
+		canvasHeight: number,
+	): void {
+		const x = (highlight.position.x / 100) * canvasWidth;
+		const y = (highlight.position.y / 100) * canvasHeight;
+		const width = (highlight.size.width / 100) * canvasWidth;
+		const height = (highlight.size.height / 100) * canvasHeight;
+		const opacity = (100 - highlight.dimOpacity) / 100;
+
+		ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+		ctx.beginPath();
+		// Outer rectangle (full canvas)
+		ctx.rect(0, 0, canvasWidth, canvasHeight);
+		// Inner rectangle (highlight window - creates cutout with evenodd)
+		ctx.rect(x, y, width, height);
+		ctx.fill("evenodd");
 	}
 
 	private updateLayout(webcamFrame?: VideoFrame | null): void {
