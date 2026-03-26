@@ -175,3 +175,36 @@ function clamp(value: number, min: number, max: number) {
 	if (Number.isNaN(value)) return (min + max) / 2;
 	return Math.min(max, Math.max(min, value));
 }
+
+// === Highlight Region Types ===
+
+export interface HighlightRegion {
+	id: string;
+	startMs: number;
+	endMs: number;
+	position: { x: number; y: number };
+	size: { width: number; height: number };
+	dimOpacity: number;
+}
+
+export const DEFAULT_HIGHLIGHT_POSITION = { x: 35, y: 35 };
+export const DEFAULT_HIGHLIGHT_SIZE = { width: 30, height: 30 };
+export const DEFAULT_DIM_OPACITY = 40;
+
+export function clampHighlightPosition(pos: { x: number; y: number }): { x: number; y: number } {
+	return {
+		x: clamp(pos.x, 0, 100),
+		y: clamp(pos.y, 0, 100),
+	};
+}
+
+export function clampHighlightSize(size: { width: number; height: number }): { width: number; height: number } {
+	return {
+		width: clamp(size.width, 1, 100),
+		height: clamp(size.height, 1, 100),
+	};
+}
+
+export function clampDimOpacity(opacity: number): number {
+	return clamp(opacity, 0, 100);
+}
