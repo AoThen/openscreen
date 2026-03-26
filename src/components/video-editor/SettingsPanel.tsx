@@ -49,6 +49,7 @@ import type {
 	AnnotationType,
 	CropRegion,
 	FigureData,
+	HighlightRegion,
 	PlaybackSpeed,
 	WebcamLayoutPreset,
 	ZoomDepth,
@@ -144,6 +145,11 @@ interface SettingsPanelProps {
 	hasWebcam?: boolean;
 	webcamLayoutPreset?: WebcamLayoutPreset;
 	onWebcamLayoutPresetChange?: (preset: WebcamLayoutPreset) => void;
+	// Highlight settings
+	selectedHighlightId?: string | null;
+	highlightRegions?: HighlightRegion[];
+	onHighlightDimOpacityChange?: (id: string, dimOpacity: number) => void;
+	onHighlightDelete?: (id: string) => void;
 }
 
 export default SettingsPanel;
@@ -213,6 +219,10 @@ export function SettingsPanel({
 	hasWebcam = false,
 	webcamLayoutPreset = "picture-in-picture",
 	onWebcamLayoutPresetChange,
+	selectedHighlightId,
+	highlightRegions = [],
+	onHighlightDimOpacityChange,
+	onHighlightDelete,
 }: SettingsPanelProps) {
 	const t = useScopedT("settings");
 	const [wallpaperPaths, setWallpaperPaths] = useState<string[]>([]);
@@ -515,6 +525,47 @@ export function SettingsPanel({
 						</Button>
 					)}
 				</div>
+
+				{selectedHighlightId && (() => {
+					const selectedHighlight = highlightRegions.find(r => r.id === selectedHighlightId);
+					if (!selectedHighlight) return null;
+					return (
+						<div className="mb-4">
+							<div className="flex items-center justify-between mb-3">
+								<span className="text-sm font-medium text-slate-200">{t("highlight.title")}</span>
+							</div>
+							<div className="space-y-2">
+								<div className="p-2 rounded-lg bg-white/5 border border-white/5">
+									<div className="flex items-center justify-between mb-1">
+										<div className="text-[10px] font-medium text-slate-300">
+											{t("highlight.dimOpacity")}
+										</div>
+										<span className="text-[10px] text-slate-500 font-mono">
+											{selectedHighlight.dimOpacity}%
+										</span>
+									</div>
+									<Slider
+										value={[selectedHighlight.dimOpacity]}
+										onValueChange={([value]) => onHighlightDimOpacityChange?.(selectedHighlightId, value)}
+										min={0}
+										max={100}
+										step={1}
+										className="w-full [&_[role=slider]]:bg-[#34B27B] [&_[role=slider]]:border-[#34B27B] [&_[role=slider]]:h-3 [&_[role=slider]]:w-3"
+									/>
+								</div>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => onHighlightDelete?.(selectedHighlightId)}
+									className="w-full gap-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all h-8 text-xs"
+								>
+									<Trash2 className="w-3 h-3" />
+									{t("highlight.delete")}
+								</Button>
+							</div>
+						</div>
+					);
+				})()}
 
 				{trimEnabled && (
 					<div className="mb-4">
