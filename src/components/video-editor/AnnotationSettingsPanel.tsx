@@ -10,6 +10,7 @@ import {
 	Bold,
 	ChevronDown,
 	Copy,
+	EyeOff,
 	Image as ImageIcon,
 	Info,
 	Italic,
@@ -38,7 +39,14 @@ import { type CustomFont, getCustomFonts } from "@/lib/customFonts";
 import { cn } from "@/lib/utils";
 import { AddCustomFontDialog } from "./AddCustomFontDialog";
 import { getArrowComponent } from "./ArrowSvgs";
-import type { AnnotationRegion, AnnotationType, ArrowDirection, FigureData } from "./types";
+import type {
+	AnnotationRegion,
+	AnnotationType,
+	ArrowDirection,
+	BlurData,
+	BlurEffectType,
+	FigureData,
+} from "./types";
 
 type ZIndexAction = "bringForward" | "sendBackward" | "bringToFront" | "sendToBack";
 
@@ -49,6 +57,7 @@ interface AnnotationSettingsPanelProps {
 	onTypeChange: (type: AnnotationType) => void;
 	onStyleChange: (style: Partial<AnnotationRegion["style"]>) => void;
 	onFigureDataChange?: (figureData: FigureData) => void;
+	onBlurDataChange?: (blurData: BlurData) => void;
 	onZIndexChange?: (action: ZIndexAction) => void;
 	onDelete: () => void;
 	onDuplicate?: () => void;
@@ -74,6 +83,7 @@ export function AnnotationSettingsPanel({
 	onTypeChange,
 	onStyleChange,
 	onFigureDataChange,
+	onBlurDataChange,
 	onZIndexChange,
 	onDelete,
 	onDuplicate,
@@ -179,7 +189,7 @@ export function AnnotationSettingsPanel({
 					onValueChange={(value) => onTypeChange(value as AnnotationType)}
 					className="mb-6"
 				>
-					<TabsList className="mb-4 bg-white/5 border border-white/5 p-1 w-full grid grid-cols-3 h-auto rounded-xl">
+					<TabsList className="mb-4 bg-white/5 border border-white/5 p-1 w-full grid grid-cols-4 h-auto rounded-xl">
 						<TabsTrigger
 							value="text"
 							className="data-[state=active]:bg-[#34B27B] data-[state=active]:text-white text-slate-400 py-2 rounded-lg transition-all gap-2"
@@ -208,6 +218,13 @@ export function AnnotationSettingsPanel({
 								<path d="M4 12h16m0 0l-6-6m6 6l-6 6" strokeLinecap="round" strokeLinejoin="round" />
 							</svg>
 							{t("annotation.typeArrow")}
+						</TabsTrigger>
+						<TabsTrigger
+							value="blur"
+							className="data-[state=active]:bg-[#34B27B] data-[state=active]:text-white text-slate-400 py-2 rounded-lg transition-all gap-2"
+						>
+							<EyeOff className="w-4 h-4" />
+							{t("annotation.typeBlur")}
 						</TabsTrigger>
 					</TabsList>
 
@@ -678,6 +695,127 @@ export function AnnotationSettingsPanel({
 								</PopoverContent>
 							</Popover>
 						</div>
+					</TabsContent>
+
+					<TabsContent value="blur" className="mt-0 space-y-4">
+						{annotation.blurData && onBlurDataChange && (
+							<>
+								{/* Blur Type Selector */}
+								<div>
+									<label className="text-xs font-medium text-slate-200 mb-2 block">
+										{t("annotation.blurType")}
+									</label>
+									<div className="grid grid-cols-3 gap-2">
+										{(["gaussian", "solid", "heavy"] as BlurEffectType[]).map((type) => (
+											<button
+												key={type}
+												onClick={() => {
+													const newBlurData: BlurData = {
+														...annotation.blurData!,
+														effectType: type,
+													};
+													onBlurDataChange(newBlurData);
+												}}
+												className={cn(
+													"h-10 rounded-lg border text-xs font-medium transition-all",
+													annotation.blurData?.effectType === type
+														? "bg-[#34B27B] border-[#34B27B] text-white"
+														: "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:border-white/20",
+												)}
+											>
+												{t(`annotation.blur${type.charAt(0).toUpperCase() + type.slice(1)}` as const)}
+											</button>
+										))}
+									</div>
+								</div>
+
+								{/* Intensity Slider (for gaussian and heavy) */}
+								{annotation.blurData.effectType !== "solid" && (
+									<div>
+										<label className="text-xs font-medium text-slate-200 mb-2 block">
+											{t("annotation.blurIntensity")}: {annotation.blurData.intensity}
+										</label>
+										<Slider
+											value={[annotation.blurData.intensity]}
+											onValueChange={([value]) => {
+												const newBlurData: BlurData = {
+													...annotation.blurData!,
+													intensity: value,
+												};
+												onBlurDataChange(newBlurData);
+											}}
+											min={1}
+											max={30}
+											step={1}
+											className="w-full"
+										/>
+										<p className="text-[10px] text-slate-500 mt-1">{t("annotation.blurTipIntensity")}</p>
+									</div>
+								)}
+
+								{/* Feathering Slider */}
+								<div>
+									<label className="text-xs font-medium text-slate-200 mb-2 block">
+										{t("annotation.blurFeathering")}: {annotation.blurData.feathering}px
+									</label>
+									<Slider
+										value={[annotation.blurData.feathering]}
+										onValueChange={([value]) => {
+											const newBlurData: BlurData = {
+												...annotation.blurData!,
+												feathering: value,
+											};
+											onBlurDataChange(newBlurData);
+										}}
+										min={0}
+										max={20}
+										step={1}
+										className="w-full"
+									/>
+									<p className="text-[10px] text-slate-500 mt-1">{t("annotation.blurTipFeathering")}</p>
+								</div>
+
+								{/* Solid Color Picker (only for solid type) */}
+								{annotation.blurData.effectType === "solid" && (
+									<div>
+										<label className="text-xs font-medium text-slate-200 mb-2 block">
+											{t("annotation.blurSolidColor")}
+										</label>
+										<Popover>
+											<PopoverTrigger asChild>
+												<Button
+													variant="outline"
+													className="w-full h-10 justify-start gap-2 bg-white/5 border-white/10 hover:bg-white/10"
+												>
+													<div
+														className="w-5 h-5 rounded-full border border-white/20"
+														style={{ backgroundColor: annotation.blurData?.solidColor || "#000000" }}
+													/>
+													<span className="text-xs text-slate-300 truncate flex-1 text-left">
+														{annotation.blurData?.solidColor || "#000000"}
+													</span>
+													<ChevronDown className="h-3 w-3 opacity-50" />
+												</Button>
+											</PopoverTrigger>
+											<PopoverContent className="w-[260px] p-3 bg-[#1a1a1c] border border-white/10 rounded-xl shadow-xl">
+												<Block
+													color={annotation.blurData?.solidColor || "#000000"}
+													colors={colorPalette}
+													onChange={(color) => {
+														const newBlurData: BlurData = {
+															...annotation.blurData!,
+															solidColor: color.hex,
+														};
+														onBlurDataChange(newBlurData);
+													}}
+													style={{ borderRadius: "8px" }}
+												/>
+											</PopoverContent>
+										</Popover>
+									</div>
+								)}
+							</>
+						)}
 					</TabsContent>
 				</Tabs>
 
