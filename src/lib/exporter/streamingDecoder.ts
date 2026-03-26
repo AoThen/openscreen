@@ -1,5 +1,6 @@
 import { WebDemuxer } from "web-demuxer";
 import type { SpeedRegion, TrimRegion } from "@/components/video-editor/types";
+import { desktopApi } from "@/lib/desktopApi";
 
 const SOURCE_LOAD_TIMEOUT_MS = 60_000;
 
@@ -86,9 +87,9 @@ export class StreamingVideoDecoder {
 	private async loadSourceFile(videoUrl: string): Promise<{ file: File; blob: Blob }> {
 		const isRemoteUrl = /^(https?:|blob:|data:)/i.test(videoUrl);
 
-		if (!isRemoteUrl && window.electronAPI?.readBinaryFile) {
+		if (!isRemoteUrl) {
 			const result = await this.withTimeout(
-				window.electronAPI.readBinaryFile(videoUrl),
+				desktopApi.readBinaryFile(videoUrl),
 				SOURCE_LOAD_TIMEOUT_MS,
 				"Timed out while loading the source video.",
 			);
@@ -97,7 +98,10 @@ export class StreamingVideoDecoder {
 			}
 
 			const filename = (result.path || videoUrl).split(/[\\/]/).pop() || "video";
-			const blob = new Blob([result.data]);
+			// 创建新的 ArrayBuffer 来避免 SharedArrayBuffer 兼容性问题
+			const arrayBuffer = new ArrayBuffer(result.data.length);
+			new Uint8Array(arrayBuffer).set(result.data);
+			const blob = new Blob([arrayBuffer]);
 			return {
 				blob,
 				file: new File([blob], filename, { type: blob.type || "application/octet-stream" }),

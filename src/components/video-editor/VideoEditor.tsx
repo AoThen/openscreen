@@ -21,6 +21,7 @@ import {
 	VideoExporter,
 } from "@/lib/exporter";
 import type { ProjectMedia } from "@/lib/recordingSession";
+import { desktopApi } from "@/lib/desktopApi";
 import { matchesShortcut } from "@/lib/shortcuts";
 import {
 	getAspectRatioValue,
@@ -325,7 +326,7 @@ export default function VideoEditor() {
 	useEffect(() => {
 		async function loadInitialData() {
 			try {
-				const currentProjectResult = await window.electronAPI.loadCurrentProjectFile();
+				const currentProjectResult = await desktopApi.loadCurrentProjectFile();
 				if (currentProjectResult.success && currentProjectResult.project) {
 					const restored = await applyLoadedProject(
 						currentProjectResult.project,
@@ -336,7 +337,7 @@ export default function VideoEditor() {
 					}
 				}
 
-				const currentSessionResult = await window.electronAPI.getCurrentRecordingSession();
+				const currentSessionResult = await desktopApi.getCurrentRecordingSession();
 				if (currentSessionResult.success && currentSessionResult.session) {
 					const session = currentSessionResult.session;
 					const sourcePath = fromFileUrl(session.screenVideoPath);
@@ -352,7 +353,7 @@ export default function VideoEditor() {
 					return;
 				}
 
-				const result = await window.electronAPI.getCurrentVideoPath();
+				const result = await desktopApi.getCurrentVideoPath();
 				if (result.success && result.path) {
 					const sourcePath = fromFileUrl(result.path);
 					setVideoSourcePath(sourcePath);
@@ -415,7 +416,7 @@ export default function VideoEditor() {
 					.pop()
 					?.replace(/\.[^.]+$/, "") || `project-${Date.now()}`;
 			const projectSnapshot = JSON.stringify(projectData);
-			const result = await window.electronAPI.saveProjectFile(
+			const result = await desktopApi.saveProjectFile(
 				projectData,
 				fileNameBase,
 				forceSaveAs ? undefined : (currentProjectPath ?? undefined),
@@ -468,11 +469,11 @@ export default function VideoEditor() {
 	);
 
 	useEffect(() => {
-		window.electronAPI.setHasUnsavedChanges(hasUnsavedChanges);
+		desktopApi.setHasUnsavedChanges(hasUnsavedChanges);
 	}, [hasUnsavedChanges]);
 
 	useEffect(() => {
-		const cleanup = window.electronAPI.onRequestSaveBeforeClose(async () => {
+		const cleanup = desktopApi.onRequestSaveBeforeClose(async () => {
 			return saveProject(false);
 		});
 		return () => cleanup();
@@ -487,7 +488,7 @@ export default function VideoEditor() {
 	}, [saveProject]);
 
 	const handleLoadProject = useCallback(async () => {
-		const result = await window.electronAPI.loadProjectFile();
+		const result = await desktopApi.loadProjectFile();
 
 		if (result.canceled) {
 			return;
@@ -508,9 +509,9 @@ export default function VideoEditor() {
 	}, [applyLoadedProject]);
 
 	useEffect(() => {
-		const removeLoadListener = window.electronAPI.onMenuLoadProject(handleLoadProject);
-		const removeSaveListener = window.electronAPI.onMenuSaveProject(handleSaveProject);
-		const removeSaveAsListener = window.electronAPI.onMenuSaveProjectAs(handleSaveProjectAs);
+		const removeLoadListener = desktopApi.onMenuLoadProject(handleLoadProject);
+		const removeSaveListener = desktopApi.onMenuSaveProject(handleSaveProject);
+		const removeSaveAsListener = desktopApi.onMenuSaveProjectAs(handleSaveProjectAs);
 
 		return () => {
 			removeLoadListener?.();
@@ -533,7 +534,7 @@ export default function VideoEditor() {
 			}
 
 			try {
-				const result = await window.electronAPI.getCursorTelemetry(sourcePath);
+				const result = await desktopApi.getCursorTelemetry(sourcePath);
 				if (mounted) {
 					setCursorTelemetry(result.success ? result.samples : []);
 				}
@@ -1251,7 +1252,7 @@ export default function VideoEditor() {
 
 	const handleShowExportedFile = useCallback(async (filePath: string) => {
 		try {
-			const result = await window.electronAPI.revealInFolder(filePath);
+			const result = await desktopApi.revealInFolder(filePath);
 			if (!result.success) {
 				const errorMessage = result.error || result.message || "Failed to reveal item in folder.";
 				console.error("Failed to reveal in folder:", errorMessage);
@@ -1283,7 +1284,7 @@ export default function VideoEditor() {
 	const handleSaveUnsavedExport = useCallback(async () => {
 		if (!unsavedExport) return;
 		try {
-			const saveResult = await window.electronAPI.saveExportedVideo(
+			const saveResult = await desktopApi.saveExportedVideo(
 				unsavedExport.arrayBuffer,
 				unsavedExport.fileName,
 			);
@@ -1378,7 +1379,7 @@ export default function VideoEditor() {
 						const timestamp = Date.now();
 						const fileName = `export-${timestamp}.gif`;
 
-						const saveResult = await window.electronAPI.saveExportedVideo(arrayBuffer, fileName);
+						const saveResult = await desktopApi.saveExportedVideo(arrayBuffer, fileName);
 
 						if (saveResult.canceled) {
 							setUnsavedExport({ arrayBuffer, fileName, format: "gif" });
@@ -1509,7 +1510,7 @@ export default function VideoEditor() {
 						const timestamp = Date.now();
 						const fileName = `export-${timestamp}.mp4`;
 
-						const saveResult = await window.electronAPI.saveExportedVideo(arrayBuffer, fileName);
+						const saveResult = await desktopApi.saveExportedVideo(arrayBuffer, fileName);
 
 						if (saveResult.canceled) {
 							setUnsavedExport({ arrayBuffer, fileName, format: "mp4" });

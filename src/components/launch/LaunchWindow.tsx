@@ -22,6 +22,7 @@ import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { type Locale, SUPPORTED_LOCALES } from "@/i18n/config";
 import { getLocaleName } from "@/i18n/loader";
 import { isMac as getIsMac } from "@/utils/platformUtils";
+import { desktopApi } from "@/lib/desktopApi";
 import { useAudioLevelMeter } from "../../hooks/useAudioLevelMeter";
 import { useMicrophoneDevices } from "../../hooks/useMicrophoneDevices";
 import { useScreenRecorder } from "../../hooks/useScreenRecorder";
@@ -145,15 +146,13 @@ export function LaunchWindow() {
 
 	useEffect(() => {
 		const checkSelectedSource = async () => {
-			if (window.electronAPI) {
-				const source = await window.electronAPI.getSelectedSource();
-				if (source) {
-					setSelectedSource(source.name);
-					setHasSelectedSource(true);
-				} else {
-					setSelectedSource("Screen");
-					setHasSelectedSource(false);
-				}
+			const source = await desktopApi.getSelectedSource();
+			if (source) {
+				setSelectedSource(source.name);
+				setHasSelectedSource(true);
+			} else {
+				setSelectedSource("Screen");
+				setHasSelectedSource(false);
 			}
 		};
 
@@ -164,39 +163,33 @@ export function LaunchWindow() {
 	}, []);
 
 	const openSourceSelector = () => {
-		if (window.electronAPI) {
-			window.electronAPI.openSourceSelector();
-		}
+		desktopApi.openSourceSelector();
 	};
 
 	const openVideoFile = async () => {
-		const result = await window.electronAPI.openVideoFilePicker();
+		const result = await desktopApi.openVideoFilePicker();
 
 		if (result.canceled) {
 			return;
 		}
 
 		if (result.success && result.path) {
-			await window.electronAPI.setCurrentVideoPath(result.path);
-			await window.electronAPI.switchToEditor();
+			await desktopApi.setCurrentVideoPath(result.path);
+			await desktopApi.switchToEditor();
 		}
 	};
 
 	const openProjectFile = async () => {
-		const result = await window.electronAPI.loadProjectFile();
+		const result = await desktopApi.loadProjectFile();
 		if (result.canceled || !result.success) return;
-		await window.electronAPI.switchToEditor();
+		await desktopApi.switchToEditor();
 	};
 
 	const sendHudOverlayHide = () => {
-		if (window.electronAPI && window.electronAPI.hudOverlayHide) {
-			window.electronAPI.hudOverlayHide();
-		}
+		desktopApi.hudOverlayHide();
 	};
 	const sendHudOverlayClose = () => {
-		if (window.electronAPI && window.electronAPI.hudOverlayClose) {
-			window.electronAPI.hudOverlayClose();
-		}
+		desktopApi.hudOverlayClose();
 	};
 
 	const toggleMicrophone = () => {

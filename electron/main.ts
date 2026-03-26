@@ -410,6 +410,7 @@ app.whenReady().then(async () => {
 					showMainWindow();
 				}
 			},
+			showMainWindow,
 		);
 		createWindow();
 	} catch (error) {

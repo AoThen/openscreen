@@ -1,17 +1,19 @@
+import { desktopApi } from "@/lib/desktopApi";
+
 let cachedPlatform: string | null = null;
 
 /**
- * Gets the current platform from Electron
+ * Gets the current platform from desktop app
  */
 const getPlatform = async (): Promise<string> => {
 	if (cachedPlatform) return cachedPlatform;
 
 	try {
-		const platform = await window.electronAPI.getPlatform();
+		const platform = await desktopApi.getPlatform();
 		cachedPlatform = platform;
 		return platform;
 	} catch (error) {
-		console.warn("Failed to get platform from Electron, falling back to navigator:", error);
+		console.warn("Failed to get platform, falling back to navigator:", error);
 		// Fallback for development/testing
 		let fallbackPlatform = "win32";
 		if (typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform)) {

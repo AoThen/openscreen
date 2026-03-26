@@ -218,6 +218,7 @@ export function registerIpcHandlers(
 	getMainWindow: () => BrowserWindow | null,
 	getSourceSelectorWindow: () => BrowserWindow | null,
 	onRecordingStateChange?: (recording: boolean, sourceName: string) => void,
+	showHudWindow?: () => void,
 ) {
 	ipcMain.handle("get-system-fonts", async () => {
 		try {
@@ -301,6 +302,25 @@ export function registerIpcHandlers(
 			mainWin.close();
 		}
 		createEditorWindow();
+	});
+
+	ipcMain.handle("show-hud-window", () => {
+		if (showHudWindow) {
+			showHudWindow();
+		}
+	});
+
+	ipcMain.handle("close-source-selector", () => {
+		const sourceSelectorWin = getSourceSelectorWindow();
+		if (sourceSelectorWin) {
+			sourceSelectorWin.close();
+		}
+	});
+
+	ipcMain.handle("update-tray", (_, isRecording: boolean, sourceName: string) => {
+		if (onRecordingStateChange) {
+			onRecordingStateChange(isRecording, sourceName);
+		}
 	});
 
 	ipcMain.handle("store-recorded-session", async (_, payload: StoreRecordedSessionInput) => {
@@ -792,5 +812,34 @@ export function registerIpcHandlers(
 			console.error("Failed to save shortcuts:", error);
 			return { success: false, error: String(error) };
 		}
+	});
+
+	// 音频相关 IPC 处理器
+	// 注意：麦克风设备枚举由前端 Web API (navigator.mediaDevices.enumerateDevices) 完成
+	// 这里仅处理权限请求
+	ipcMain.handle("get-microphone-devices", () => {
+		// 在 Electron 版本中，设备枚举由前端 Web API 完成
+		// 这里返回空数组，前端会使用 navigator.mediaDevices.enumerateDevices()
+		return { success: true, devices: [] };
+	});
+
+	ipcMain.handle("check-microphone-permission", () => {
+		if (process.platform === "darwin") {
+			const status = systemPreferences.getMediaAccessStatus("microphone");
+			return status;
+		}
+		return "granted";
+	});
+
+	ipcMain.handle("request-microphone-permission", async () => {
+		if (process.platform === "darwin") {
+			const status = systemPreferences.getMediaAccessStatus("microphone");
+			if (status !== "granted") {
+				const granted = await systemPreferences.askForMediaAccess("microphone");
+				return granted;
+			}
+			return true;
+		}
+		return true;
 	});
 }

@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react";
 import { MdCheck } from "react-icons/md";
 import { useScopedT } from "@/contexts/I18nContext";
+import { desktopApi, type ProcessedDesktopSource } from "@/lib/desktopApi";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import styles from "./SourceSelector.module.css";
 
-interface DesktopSource {
-	id: string;
-	name: string;
-	thumbnail: string | null;
-	display_id: string;
-	appIcon: string | null;
-}
+type DesktopSource = ProcessedDesktopSource;
 
 export function SourceSelector() {
 	const t = useScopedT("launch");
@@ -24,10 +19,9 @@ export function SourceSelector() {
 		async function fetchSources() {
 			setLoading(true);
 			try {
-				const rawSources = await window.electronAPI.getSources({
+				const rawSources = await desktopApi.getSources({
 					types: ["screen", "window"],
 					thumbnailSize: { width: 320, height: 180 },
-					fetchWindowIcons: true,
 				});
 				setSources(
 					rawSources.map((source) => ({
@@ -55,7 +49,7 @@ export function SourceSelector() {
 
 	const handleSourceSelect = (source: DesktopSource) => setSelectedSource(source);
 	const handleShare = async () => {
-		if (selectedSource) await window.electronAPI.selectSource(selectedSource);
+		if (selectedSource) await desktopApi.selectSource(selectedSource);
 	};
 
 	if (loading) {

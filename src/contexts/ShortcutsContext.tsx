@@ -9,6 +9,7 @@ import {
 } from "react";
 import { DEFAULT_SHORTCUTS, mergeWithDefaults, type ShortcutsConfig } from "@/lib/shortcuts";
 import { isMac as getIsMac } from "@/utils/platformUtils";
+import { desktopApi } from "@/lib/desktopApi";
 
 interface ShortcutsContextValue {
 	shortcuts: ShortcutsConfig;
@@ -40,8 +41,8 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
 				// Keep default non-mac fallback if detection fails.
 			});
 
-		window.electronAPI
-			.getShortcuts?.()
+		desktopApi
+			.getShortcuts()
 			.then((saved) => {
 				if (saved) {
 					setShortcuts(mergeWithDefaults(saved as Partial<ShortcutsConfig>));
@@ -54,7 +55,7 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
 
 	const persistShortcuts = useCallback(
 		async (config?: ShortcutsConfig) => {
-			await window.electronAPI.saveShortcuts?.(config ?? shortcuts);
+			await desktopApi.saveShortcuts(config ?? shortcuts);
 		},
 		[shortcuts],
 	);

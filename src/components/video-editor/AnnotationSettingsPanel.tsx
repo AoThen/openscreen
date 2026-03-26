@@ -35,6 +35,7 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useScopedT } from "@/contexts/I18nContext";
+import { desktopApi } from "@/lib/desktopApi";
 import { type CustomFont, getCustomFonts } from "@/lib/customFonts";
 import { cn } from "@/lib/utils";
 import { AddCustomFontDialog } from "./AddCustomFontDialog";
@@ -109,13 +110,11 @@ export function AnnotationSettingsPanel({
 		setCustomFonts(getCustomFonts());
 
 		// Load system fonts
-		if (window.electronAPI?.getSystemFonts) {
-			window.electronAPI.getSystemFonts().then((result) => {
-				if (result.success) {
-					setSystemFonts(result.fonts);
-				}
-			});
-		}
+		desktopApi.getSystemFonts().then((result) => {
+			if (result.success) {
+				setSystemFonts(result.fonts);
+			}
+		});
 	}, []);
 
 	const colorPalette = [

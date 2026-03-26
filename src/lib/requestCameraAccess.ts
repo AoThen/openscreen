@@ -1,3 +1,5 @@
+import { desktopApi } from "@/lib/desktopApi";
+
 export type CameraAccessResult = {
 	success: boolean;
 	granted: boolean;
@@ -14,20 +16,18 @@ function getDeniedStatus(error: unknown) {
 }
 
 export async function requestCameraAccess(): Promise<CameraAccessResult> {
-	if (window.electronAPI?.requestCameraAccess) {
-		try {
-			const electronResult = await window.electronAPI.requestCameraAccess();
-			if (!electronResult.success || !electronResult.granted) {
-				return electronResult;
-			}
-		} catch (error) {
-			return {
-				success: false,
-				granted: false,
-				status: "error",
-				error: String(error),
-			};
+	try {
+		const electronResult = await desktopApi.requestCameraAccess();
+		if (!electronResult.success || !electronResult.granted) {
+			return electronResult;
 		}
+	} catch (error) {
+		return {
+			success: false,
+			granted: false,
+			status: "error",
+			error: String(error),
+		};
 	}
 
 	if (!navigator.mediaDevices?.getUserMedia) {

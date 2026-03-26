@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "OpenScreen",
+  "version": "1.2.0",
+  "identifier": "com.siddharthvaddem.openscreen",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build-vite",
+    "beforeDevCommand": "npm run dev"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": []
+  },
+  "plugins": {
+    "fs": {
+      "all": true,
+      "scope": ["$APPDATA/**", "$DOCUMENT/**", "$DOWNLOAD/**", "$RESOURCE/**"]
+    },
+    "dialog": {
+      "all": true
+    },
+    "opener": {}
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "nsis", "appimage"],
+    "resources": ["../public/wallpapers", "../public/wasm"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "info": {
+        "NSMicrophoneUsageDescription": "OpenScreen needs access to your microphone to record audio.",
+        "NSScreenCaptureUsageDescription": "OpenScreen needs access to capture your screen for recording.",
+        "NSCameraUsageDescription": "OpenScreen needs access to your camera for webcam overlay."
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
-/// <reference types="../electron/electron-env" />
 
+// Electron 环境类型定义
 interface ProcessedDesktopSource {
 	id: string;
 	name: string;
@@ -15,8 +15,17 @@ interface CursorTelemetryPoint {
 	cy: number;
 }
 
+// Tauri 环境检测
 interface Window {
+	__TAURI__?: Record<string, unknown>;
 	electronAPI: {
+		readBinaryFile: (filePath: string) => Promise<{
+			success: boolean;
+			data?: Uint8Array;
+			path?: string;
+			message?: string;
+			error?: string;
+		}>;
 		getSources: (opts: Electron.SourcesOptions) => Promise<ProcessedDesktopSource[]>;
 		switchToEditor: () => Promise<void>;
 		openSourceSelector: () => Promise<void>;
@@ -55,6 +64,7 @@ interface Window {
 		}>;
 		getAssetBasePath: () => Promise<string | null>;
 		setRecordingState: (recording: boolean) => Promise<void>;
+		setCursorDisplayBounds: (x: number, y: number, width: number, height: number) => Promise<void>;
 		getCursorTelemetry: (videoPath?: string) => Promise<{
 			success: boolean;
 			samples: CursorTelemetryPoint[];
@@ -125,5 +135,28 @@ interface Window {
 			fonts: string[];
 			error?: string;
 		}>;
+		revealInFolder: (filePath: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+		getPlatform: () => Promise<string>;
+		getShortcuts: () => Promise<Record<string, unknown> | null>;
+		saveShortcuts: (shortcuts: Record<string, unknown>) => Promise<void>;
+		hudOverlayHide: () => void;
+		hudOverlayClose: () => void;
+		showHudWindow: () => Promise<void>;
+		closeSourceSelector: () => Promise<void>;
+		updateTray: (isRecording: boolean, sourceName: string) => Promise<void>;
+		// 音频相关
+		getMicrophoneDevices: () => Promise<{
+			success: boolean;
+			devices: Array<{
+				deviceId: string;
+				name: string;
+				isDefault: boolean;
+				channels: number;
+				sampleRate: number;
+			}>;
+			error?: string;
+		}>;
+		checkMicrophonePermission: () => Promise<string>;
+		requestMicrophonePermission: () => Promise<boolean>;
 	};
 }

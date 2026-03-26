@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useScopedT } from "@/contexts/I18nContext";
 import { requestCameraAccess } from "@/lib/requestCameraAccess";
+import { desktopApi } from "@/lib/desktopApi";
 
 const TARGET_FRAME_RATE = 60;
 const MIN_FRAME_RATE = 30;
@@ -185,7 +186,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	);
 
 	const finalizeRecording = useCallback(
-		(
+		async (
 			activeScreenRecorder: RecorderHandle,
 			activeWebcamRecorder: RecorderHandle | null,
 			duration: number,
@@ -206,7 +207,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			teardownMedia();
 			setRecording(false);
 			setPaused(false);
-			window.electronAPI?.setRecordingState(false);
+			await desktopApi.setRecordingState(false);
 
 			void (async () => {
 				try {
@@ -229,7 +230,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 					const screenFileName = `${RECORDING_FILE_PREFIX}${activeRecordingId}${VIDEO_FILE_EXTENSION}`;
 					const webcamFileName = `${RECORDING_FILE_PREFIX}${activeRecordingId}${WEBCAM_FILE_SUFFIX}${VIDEO_FILE_EXTENSION}`;
-					const result = await window.electronAPI.storeRecordedSession({
+					const result = await desktopApi.storeRecordedSession({
 						screen: {
 							videoData: await fixedScreenBlob.arrayBuffer(),
 							fileName: screenFileName,
@@ -249,12 +250,12 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 					}
 
 					if (result.session) {
-						await window.electronAPI.setCurrentRecordingSession(result.session);
+						await desktopApi.setCurrentRecordingSession(result.session);
 					} else if (result.path) {
-						await window.electronAPI.setCurrentVideoPath(result.path);
+						await desktopApi.setCurrentVideoPath(result.path);
 					}
 
-					await window.electronAPI.switchToEditor();
+					await desktopApi.switchToEditor();
 				} catch (error) {
 					console.error("Error saving recording:", error);
 				} finally {
@@ -319,11 +320,9 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	useEffect(() => {
 		let cleanup: (() => void) | undefined;
 
-		if (window.electronAPI?.onStopRecordingFromTray) {
-			cleanup = window.electronAPI.onStopRecordingFromTray(() => {
-				stopRecording.current();
-			});
-		}
+		cleanup = desktopApi.onStopRecordingFromTray(() => {
+			stopRecording.current();
+		});
 
 		return () => {
 			if (cleanup) cleanup();
@@ -353,7 +352,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 	const startRecording = async () => {
 		try {
-			const selectedSource = await window.electronAPI.getSelectedSource();
+			const selectedSource = await desktopApi.getSelectedSource();
 			if (!selectedSource) {
 				alert(t("recording.selectSource"));
 				return;
@@ -532,7 +531,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			allowAutoFinalize.current = true;
 			setRecording(true);
 			setPaused(false);
-			window.electronAPI?.setRecordingState(true);
+			await desktopApi.setRecordingState(true);
 
 			const activeScreenRecorder = screenRecorder.current;
 			const activeWebcamRecorder = webcamRecorder.current;

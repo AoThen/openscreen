@@ -8,6 +8,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	hudOverlayClose: () => {
 		ipcRenderer.send("hud-overlay-close");
 	},
+	showHudWindow: () => {
+		return ipcRenderer.invoke("show-hud-window");
+	},
+	closeSourceSelector: () => {
+		return ipcRenderer.invoke("close-source-selector");
+	},
 	getAssetBasePath: async () => {
 		// ask main process for the correct base path (production vs dev)
 		return await ipcRenderer.invoke("get-asset-base-path");
@@ -43,6 +49,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 	setRecordingState: (recording: boolean) => {
 		return ipcRenderer.invoke("set-recording-state", recording);
+	},
+	setCursorDisplayBounds: (_x: number, _y: number, _width: number, _height: number) => {
+		// Electron 版本不需要此功能，光标追踪在渲染进程中处理
+		return Promise.resolve();
 	},
 	getCursorTelemetry: (videoPath?: string) => {
 		return ipcRenderer.invoke("get-cursor-telemetry", videoPath);
@@ -138,5 +148,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		};
 		ipcRenderer.on("request-save-before-close", listener);
 		return () => ipcRenderer.removeListener("request-save-before-close", listener);
+	},
+	updateTray: (isRecording: boolean, sourceName: string) => {
+		return ipcRenderer.invoke("update-tray", isRecording, sourceName);
+	},
+	getMicrophoneDevices: () => {
+		return ipcRenderer.invoke("get-microphone-devices");
+	},
+	checkMicrophonePermission: () => {
+		return ipcRenderer.invoke("check-microphone-permission");
+	},
+	requestMicrophonePermission: () => {
+		return ipcRenderer.invoke("request-microphone-permission");
 	},
 });

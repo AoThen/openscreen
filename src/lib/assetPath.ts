@@ -1,3 +1,5 @@
+import { desktopApi } from "@/lib/desktopApi";
+
 function encodeRelativeAssetPath(relativePath: string): string {
 	return relativePath
 		.replace(/^\/+/, "")
@@ -25,11 +27,9 @@ export async function getAssetPath(relativePath: string): Promise<string> {
 				return `/${encodedRelativePath}`;
 			}
 
-			if (window.electronAPI && typeof window.electronAPI.getAssetBasePath === "function") {
-				const base = await window.electronAPI.getAssetBasePath();
-				if (base) {
-					return new URL(encodedRelativePath, ensureTrailingSlash(base)).toString();
-				}
+			const base = await desktopApi.getAssetBasePath();
+			if (base) {
+				return new URL(encodedRelativePath, ensureTrailingSlash(base)).toString();
 			}
 		}
 	} catch {

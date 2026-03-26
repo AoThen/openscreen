@@ -15,6 +15,7 @@ import {
 	SUPPORTED_LOCALES,
 } from "@/i18n/config";
 import { translate } from "@/i18n/loader";
+import { desktopApi } from "@/lib/desktopApi";
 
 type TranslateVars = Record<string, string | number>;
 
@@ -65,8 +66,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 			// localStorage may be unavailable
 		}
 		document.documentElement.lang = newLocale;
-		// Notify Electron main process
-		window.electronAPI?.setLocale?.(newLocale);
+		// Notify desktop app (Electron or Tauri)
+		desktopApi.setLocale(newLocale).catch(() => {
+			// Ignore errors
+		});
 	}, []);
 
 	useEffect(() => {
