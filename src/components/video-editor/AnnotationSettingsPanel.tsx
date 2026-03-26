@@ -723,7 +723,9 @@ export function AnnotationSettingsPanel({
 														: "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:border-white/20",
 												)}
 											>
-												{t(`annotation.blur${type.charAt(0).toUpperCase() + type.slice(1)}` as const)}
+												{t(
+													`annotation.blur${type.charAt(0).toUpperCase() + type.slice(1)}` as const,
+												)}
 											</button>
 										))}
 									</div>
@@ -749,7 +751,9 @@ export function AnnotationSettingsPanel({
 											step={1}
 											className="w-full"
 										/>
-										<p className="text-[10px] text-slate-500 mt-1">{t("annotation.blurTipIntensity")}</p>
+										<p className="text-[10px] text-slate-500 mt-1">
+											{t("annotation.blurTipIntensity")}
+										</p>
 									</div>
 								)}
 
@@ -772,7 +776,9 @@ export function AnnotationSettingsPanel({
 										step={1}
 										className="w-full"
 									/>
-									<p className="text-[10px] text-slate-500 mt-1">{t("annotation.blurTipFeathering")}</p>
+									<p className="text-[10px] text-slate-500 mt-1">
+										{t("annotation.blurTipFeathering")}
+									</p>
 								</div>
 
 								{/* Solid Color Picker (only for solid type) */}
@@ -789,7 +795,9 @@ export function AnnotationSettingsPanel({
 												>
 													<div
 														className="w-5 h-5 rounded-full border border-white/20"
-														style={{ backgroundColor: annotation.blurData?.solidColor || "#000000" }}
+														style={{
+															backgroundColor: annotation.blurData?.solidColor || "#000000",
+														}}
 													/>
 													<span className="text-xs text-slate-300 truncate flex-1 text-left">
 														{annotation.blurData?.solidColor || "#000000"}

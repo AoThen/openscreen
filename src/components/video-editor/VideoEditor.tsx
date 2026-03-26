@@ -42,7 +42,6 @@ import { SettingsPanel } from "./SettingsPanel";
 import TimelineEditor from "./timeline/TimelineEditor";
 import {
 	type AnnotationRegion,
-	DEFAULT_BLUR_DATA,
 	type BlurData,
 	type CursorTelemetryPoint,
 	clampDimOpacity,
@@ -52,6 +51,7 @@ import {
 	DEFAULT_ANNOTATION_POSITION,
 	DEFAULT_ANNOTATION_SIZE,
 	DEFAULT_ANNOTATION_STYLE,
+	DEFAULT_BLUR_DATA,
 	DEFAULT_DIM_OPACITY,
 	DEFAULT_FIGURE_DATA,
 	DEFAULT_HIGHLIGHT_POSITION,

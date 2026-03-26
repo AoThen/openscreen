@@ -401,11 +401,7 @@ export class FrameRenderer {
 			this.compositeCtx
 		) {
 			const activeBlurAnnotations = this.config.annotationRegions.filter(
-				(ann) =>
-					ann.type === "blur" &&
-					ann.blurData &&
-					timeMs >= ann.startMs &&
-					timeMs < ann.endMs,
+				(ann) => ann.type === "blur" && ann.blurData && timeMs >= ann.startMs && timeMs < ann.endMs,
 			);
 
 			for (const blurAnnotation of activeBlurAnnotations) {
