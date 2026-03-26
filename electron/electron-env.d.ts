@@ -137,6 +137,11 @@ interface Window {
 		setHasUnsavedChanges: (hasChanges: boolean) => void;
 		onRequestSaveBeforeClose: (callback: () => Promise<boolean> | boolean) => () => void;
 		setLocale: (locale: string) => Promise<void>;
+		getSystemFonts: () => Promise<{
+			success: boolean;
+			fonts: string[];
+			error?: string;
+		}>;
 	};
 }
 

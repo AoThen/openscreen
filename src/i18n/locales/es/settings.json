@@ -96,6 +96,7 @@
 		"fontStyle": "Estilo de fuente",
 		"selectStyle": "Seleccionar estilo",
 		"size": "Tamaño",
+		"systemFonts": "Fuentes del sistema",
 		"customFonts": "Fuentes personalizadas",
 		"textColor": "Color de texto",
 		"background": "Fondo",

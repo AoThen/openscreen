@@ -106,6 +106,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	getPlatform: () => {
 		return ipcRenderer.invoke("get-platform");
 	},
+	getSystemFonts: () => {
+		return ipcRenderer.invoke("get-system-fonts");
+	},
 	revealInFolder: (filePath: string) => {
 		return ipcRenderer.invoke("reveal-in-folder", filePath);
 	},

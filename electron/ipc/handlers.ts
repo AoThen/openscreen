@@ -11,6 +11,7 @@ import {
 	shell,
 	systemPreferences,
 } from "electron";
+import fontList from "font-list";
 import {
 	normalizeProjectMedia,
 	normalizeRecordingSession,
@@ -218,6 +219,17 @@ export function registerIpcHandlers(
 	getSourceSelectorWindow: () => BrowserWindow | null,
 	onRecordingStateChange?: (recording: boolean, sourceName: string) => void,
 ) {
+	ipcMain.handle("get-system-fonts", async () => {
+		try {
+			const fonts = await fontList.getFonts();
+			// Sort fonts alphabetically and return
+			return { success: true, fonts: fonts.sort((a, b) => a.localeCompare(b)) };
+		} catch (error) {
+			console.error("Failed to get system fonts:", error);
+			return { success: false, fonts: [], error: String(error) };
+		}
+	});
+
 	ipcMain.handle("get-sources", async (_, opts) => {
 		const sources = await desktopCapturer.getSources(opts);
 		return sources.map((source) => ({

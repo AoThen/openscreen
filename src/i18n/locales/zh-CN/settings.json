@@ -96,6 +96,7 @@
 		"fontStyle": "字体样式",
 		"selectStyle": "选择样式",
 		"size": "大小",
+		"systemFonts": "系统字体",
 		"customFonts": "自定义字体",
 		"textColor": "文本颜色",
 		"background": "背景",

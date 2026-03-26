@@ -52,12 +52,6 @@ const FONT_FAMILIES = [
 	{ value: "Arial, sans-serif", labelKey: "simple" },
 	{ value: "Verdana, sans-serif", labelKey: "modern" },
 	{ value: "Trebuchet MS, sans-serif", labelKey: "clean" },
-	// Chinese fonts
-	{ value: '"Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif', labelKey: "microsoftYaHei" },
-	{ value: '"SimSun", "宋体", "STSong", serif', labelKey: "simSun" },
-	{ value: '"SimHei", "黑体", "STHeiti", sans-serif', labelKey: "simHei" },
-	{ value: '"KaiTi", "楷体", "STKaiti", serif', labelKey: "kaiTi" },
-	{ value: '"FangSong", "仿宋", "STFangsong", serif', labelKey: "fangSong" },
 ];
 
 const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 96, 128];
@@ -73,6 +67,7 @@ export function AnnotationSettingsPanel({
 	const t = useScopedT("settings");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
+	const [systemFonts, setSystemFonts] = useState<string[]>([]);
 
 	const fontStyleLabels: Record<string, string> = {
 		classic: t("fontStyles.classic"),
@@ -85,9 +80,18 @@ export function AnnotationSettingsPanel({
 		clean: t("fontStyles.clean"),
 	};
 
-	// Load custom fonts on mount
+	// Load custom fonts and system fonts on mount
 	useEffect(() => {
 		setCustomFonts(getCustomFonts());
+
+		// Load system fonts
+		if (window.electronAPI?.getSystemFonts) {
+			window.electronAPI.getSystemFonts().then((result) => {
+				if (result.success) {
+					setSystemFonts(result.fonts);
+				}
+			});
+		}
 	}, []);
 
 	const colorPalette = [
@@ -233,6 +237,22 @@ export function AnnotationSettingsPanel({
 													{fontStyleLabels[font.labelKey]}
 												</SelectItem>
 											))}
+											{systemFonts.length > 0 && (
+												<>
+													<div className="px-2 py-1.5 text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+														{t("annotation.systemFonts")}
+													</div>
+													{systemFonts.map((font) => (
+														<SelectItem
+															key={font}
+															value={font}
+															style={{ fontFamily: font }}
+														>
+															{font}
+														</SelectItem>
+													))}
+												</>
+											)}
 											{customFonts.length > 0 && (
 												<>
 													<div className="px-2 py-1.5 text-[10px] font-medium text-slate-400 uppercase tracking-wider">
