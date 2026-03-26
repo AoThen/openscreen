@@ -30,3 +30,4 @@ release/**
 # Playwright
 test-results
 playwright-report/
+AGENTS.md

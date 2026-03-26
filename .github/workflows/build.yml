@@ -9,10 +9,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@main
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           
@@ -27,73 +27,80 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v4
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: release/**/*.exe
           retention-days: 30
 
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Upload Windows portable
+        uses: actions/upload-artifact@v7
         with:
-          node-version: '22'
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install app dependencies
-        run: npx electron-builder install-app-deps
-
-      - name: Build macOS app
-        run: npm run build:mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload macOS build
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-installer
-          path: release/**/*.dmg
+          name: windows-portable
+          path: release/**/*.zip
           retention-days: 30
 
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  # build-macos:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '22'
 
-      - name: Install dependencies
-        run: npm ci
+  #     - name: Setup Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.11'
 
-      - name: Install app dependencies
-        run: npx electron-builder install-app-deps
+  #     - name: Install dependencies
+  #       run: npm ci
 
-      - name: Build Linux app
-        run: npm run build:linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Install app dependencies
+  #       run: npx electron-builder install-app-deps
 
-      - name: Upload Linux build
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-installer
-          path: release/**/*.AppImage
-          retention-days: 30
+  #     - name: Build macOS app
+  #       run: npm run build:mac
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Upload macOS build
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: macos-installer
+  #         path: release/**/*.dmg
+  #         retention-days: 30
+
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '22'
+
+  #     - name: Install dependencies
+  #       run: npm ci
+
+  #     - name: Install app dependencies
+  #       run: npx electron-builder install-app-deps
+
+  #     - name: Build Linux app
+  #       run: npm run build:linux
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Upload Linux build
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: linux-installer
+  #         path: release/**/*.AppImage
+  #         retention-days: 30
 
