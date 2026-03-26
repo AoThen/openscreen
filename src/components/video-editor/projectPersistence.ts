@@ -9,11 +9,15 @@ import {
 	DEFAULT_ANNOTATION_SIZE,
 	DEFAULT_ANNOTATION_STYLE,
 	DEFAULT_CROP_REGION,
+	DEFAULT_DIM_OPACITY,
 	DEFAULT_FIGURE_DATA,
+	DEFAULT_HIGHLIGHT_POSITION,
+	DEFAULT_HIGHLIGHT_SIZE,
 	DEFAULT_PLAYBACK_SPEED,
 	DEFAULT_WEBCAM_LAYOUT_PRESET,
 	DEFAULT_WEBCAM_POSITION,
 	DEFAULT_ZOOM_DEPTH,
+	type HighlightRegion,
 	type SpeedRegion,
 	type TrimRegion,
 	type WebcamLayoutPreset,
@@ -42,6 +46,7 @@ export interface ProjectEditorState {
 	trimRegions: TrimRegion[];
 	speedRegions: SpeedRegion[];
 	annotationRegions: AnnotationRegion[];
+	highlightRegions: HighlightRegion[];
 	aspectRatio: AspectRatio;
 	webcamLayoutPreset: WebcamLayoutPreset;
 	webcamPosition: WebcamPosition | null;
@@ -304,6 +309,62 @@ export function normalizeProjectEditor(editor: Partial<ProjectEditorState>): Pro
 				})
 		: [];
 
+	const normalizedHighlightRegions: HighlightRegion[] = Array.isArray(editor.highlightRegions)
+		? editor.highlightRegions
+				.filter((region): region is HighlightRegion =>
+					Boolean(region && typeof region.id === "string"),
+				)
+				.map((region) => {
+					const rawStart = isFiniteNumber(region.startMs) ? Math.round(region.startMs) : 0;
+					const rawEnd = isFiniteNumber(region.endMs) ? Math.round(region.endMs) : rawStart + 3000;
+					const startMs = Math.max(0, Math.min(rawStart, rawEnd));
+					const endMs = Math.max(startMs + 1, rawEnd);
+
+					return {
+						id: region.id,
+						startMs,
+						endMs,
+						position: {
+							x: clamp(
+								isFiniteNumber(region.position?.x)
+									? region.position.x
+									: DEFAULT_HIGHLIGHT_POSITION.x,
+								0,
+								100,
+							),
+							y: clamp(
+								isFiniteNumber(region.position?.y)
+									? region.position.y
+									: DEFAULT_HIGHLIGHT_POSITION.y,
+								0,
+								100,
+							),
+						},
+						size: {
+							width: clamp(
+								isFiniteNumber(region.size?.width)
+									? region.size.width
+									: DEFAULT_HIGHLIGHT_SIZE.width,
+								1,
+								100,
+							),
+							height: clamp(
+								isFiniteNumber(region.size?.height)
+									? region.size.height
+									: DEFAULT_HIGHLIGHT_SIZE.height,
+								1,
+								100,
+							),
+						},
+						dimOpacity: clamp(
+							isFiniteNumber(region.dimOpacity) ? region.dimOpacity : DEFAULT_DIM_OPACITY,
+							0,
+							100,
+						),
+					};
+				})
+		: [];
+
 	const rawCropX = isFiniteNumber(editor.cropRegion?.x)
 		? editor.cropRegion.x
 		: DEFAULT_CROP_REGION.x;
@@ -345,6 +406,7 @@ export function normalizeProjectEditor(editor: Partial<ProjectEditorState>): Pro
 		trimRegions: normalizedTrimRegions,
 		speedRegions: normalizedSpeedRegions,
 		annotationRegions: normalizedAnnotationRegions,
+		highlightRegions: normalizedHighlightRegions,
 		aspectRatio:
 			editor.aspectRatio && validAspectRatios.has(editor.aspectRatio) ? editor.aspectRatio : "16:9",
 		webcamLayoutPreset:

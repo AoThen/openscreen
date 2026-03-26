@@ -43,14 +43,21 @@ import TimelineEditor from "./timeline/TimelineEditor";
 import {
 	type AnnotationRegion,
 	type CursorTelemetryPoint,
+	clampDimOpacity,
 	clampFocusToDepth,
+	clampHighlightPosition,
+	clampHighlightSize,
 	DEFAULT_ANNOTATION_POSITION,
 	DEFAULT_ANNOTATION_SIZE,
 	DEFAULT_ANNOTATION_STYLE,
+	DEFAULT_DIM_OPACITY,
 	DEFAULT_FIGURE_DATA,
+	DEFAULT_HIGHLIGHT_POSITION,
+	DEFAULT_HIGHLIGHT_SIZE,
 	DEFAULT_PLAYBACK_SPEED,
 	DEFAULT_ZOOM_DEPTH,
 	type FigureData,
+	type HighlightRegion,
 	type PlaybackSpeed,
 	type SpeedRegion,
 	type TrimRegion,
@@ -75,6 +82,7 @@ export default function VideoEditor() {
 		trimRegions,
 		speedRegions,
 		annotationRegions,
+		highlightRegions,
 		cropRegion,
 		wallpaper,
 		shadowIntensity,
@@ -103,6 +111,7 @@ export default function VideoEditor() {
 	const [selectedTrimId, setSelectedTrimId] = useState<string | null>(null);
 	const [selectedSpeedId, setSelectedSpeedId] = useState<string | null>(null);
 	const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+	const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
 	const [isExporting, setIsExporting] = useState(false);
 	const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
 	const [exportError, setExportError] = useState<string | null>(null);
@@ -127,6 +136,7 @@ export default function VideoEditor() {
 	const nextZoomIdRef = useRef(1);
 	const nextTrimIdRef = useRef(1);
 	const nextSpeedIdRef = useRef(1);
+	const nextHighlightIdRef = useRef(1);
 
 	const { shortcuts, isMac } = useShortcuts();
 	const t = useScopedT("editor");
@@ -193,6 +203,7 @@ export default function VideoEditor() {
 				trimRegions: normalizedEditor.trimRegions,
 				speedRegions: normalizedEditor.speedRegions,
 				annotationRegions: normalizedEditor.annotationRegions,
+				highlightRegions: normalizedEditor.highlightRegions,
 				aspectRatio: normalizedEditor.aspectRatio,
 				webcamLayoutPreset: normalizedEditor.webcamLayoutPreset,
 				webcamPosition: normalizedEditor.webcamPosition,
@@ -207,6 +218,7 @@ export default function VideoEditor() {
 			setSelectedTrimId(null);
 			setSelectedSpeedId(null);
 			setSelectedAnnotationId(null);
+			setSelectedHighlightId(null);
 
 			nextZoomIdRef.current = deriveNextId(
 				"zoom",
@@ -223,6 +235,10 @@ export default function VideoEditor() {
 			nextAnnotationIdRef.current = deriveNextId(
 				"annotation",
 				normalizedEditor.annotationRegions.map((region) => region.id),
+			);
+			nextHighlightIdRef.current = deriveNextId(
+				"highlight",
+				normalizedEditor.highlightRegions.map((region) => region.id),
 			);
 			nextAnnotationZIndexRef.current =
 				normalizedEditor.annotationRegions.reduce(
@@ -262,6 +278,7 @@ export default function VideoEditor() {
 				trimRegions,
 				speedRegions,
 				annotationRegions,
+				highlightRegions,
 				aspectRatio,
 				webcamLayoutPreset,
 				webcamPosition,
@@ -285,6 +302,7 @@ export default function VideoEditor() {
 		trimRegions,
 		speedRegions,
 		annotationRegions,
+		highlightRegions,
 		aspectRatio,
 		webcamLayoutPreset,
 		webcamPosition,
@@ -378,6 +396,7 @@ export default function VideoEditor() {
 				trimRegions,
 				speedRegions,
 				annotationRegions,
+				highlightRegions,
 				aspectRatio,
 				webcamLayoutPreset,
 				webcamPosition,
@@ -432,6 +451,7 @@ export default function VideoEditor() {
 			trimRegions,
 			speedRegions,
 			annotationRegions,
+			highlightRegions,
 			aspectRatio,
 			webcamLayoutPreset,
 			webcamPosition,
@@ -933,6 +953,122 @@ export default function VideoEditor() {
 		[pushState],
 	);
 
+	// === Highlight handlers ===
+	// These handlers will be connected to child components in task 12
+
+	const handleSelectHighlight = useCallback((id: string | null) => {
+		setSelectedHighlightId(id);
+		if (id) {
+			setSelectedZoomId(null);
+			setSelectedTrimId(null);
+			setSelectedAnnotationId(null);
+			setSelectedSpeedId(null);
+		}
+	}, []);
+
+	const handleHighlightAdded = useCallback(() => {
+		const id = `highlight-${nextHighlightIdRef.current++}`;
+		const newHighlight: HighlightRegion = {
+			id,
+			startMs: currentTime,
+			endMs: Math.min(currentTime + 3000, duration),
+			position: { ...DEFAULT_HIGHLIGHT_POSITION },
+			size: { ...DEFAULT_HIGHLIGHT_SIZE },
+			dimOpacity: DEFAULT_DIM_OPACITY,
+		};
+		pushState((prev) => ({ highlightRegions: [...prev.highlightRegions, newHighlight] }));
+		setSelectedHighlightId(id);
+		setSelectedZoomId(null);
+		setSelectedTrimId(null);
+		setSelectedAnnotationId(null);
+		setSelectedSpeedId(null);
+	}, [currentTime, duration, pushState]);
+
+	const handleHighlightSpanChange = useCallback(
+		(id: string, startMs: number, endMs: number) => {
+			pushState((prev) => ({
+				highlightRegions: prev.highlightRegions.map((region) =>
+					region.id === id ? { ...region, startMs, endMs } : region,
+				),
+			}));
+		},
+		[pushState],
+	);
+
+	const handleHighlightDelete = useCallback(
+		(id: string) => {
+			pushState((prev) => ({
+				highlightRegions: prev.highlightRegions.filter((r) => r.id !== id),
+			}));
+			if (selectedHighlightId === id) {
+				setSelectedHighlightId(null);
+			}
+		},
+		[selectedHighlightId, pushState],
+	);
+
+	const handleHighlightPositionChange = useCallback(
+		(id: string, position: { x: number; y: number }) => {
+			const clampedPos = clampHighlightPosition(position);
+			pushState((prev) => ({
+				highlightRegions: prev.highlightRegions.map((region) =>
+					region.id === id ? { ...region, position: clampedPos } : region,
+				),
+			}));
+		},
+		[pushState],
+	);
+
+	const handleHighlightSizeChange = useCallback(
+		(id: string, size: { width: number; height: number }) => {
+			const clampedSize = clampHighlightSize(size);
+			pushState((prev) => ({
+				highlightRegions: prev.highlightRegions.map((region) =>
+					region.id === id ? { ...region, size: clampedSize } : region,
+				),
+			}));
+		},
+		[pushState],
+	);
+
+	const handleHighlightDimOpacityChange = useCallback(
+		(id: string, dimOpacity: number) => {
+			const clampedOpacity = clampDimOpacity(dimOpacity);
+			pushState((prev) => ({
+				highlightRegions: prev.highlightRegions.map((region) =>
+					region.id === id ? { ...region, dimOpacity: clampedOpacity } : region,
+				),
+			}));
+		},
+		[pushState],
+	);
+
+	// Export highlight handlers for use in child components (task 12)
+	// This object reference ensures TypeScript recognizes these are intentionally exported
+	const highlightHandlers = useMemo(
+		() => ({
+			selectHighlight: handleSelectHighlight,
+			addHighlight: handleHighlightAdded,
+			changeSpan: handleHighlightSpanChange,
+			delete: handleHighlightDelete,
+			changePosition: handleHighlightPositionChange,
+			changeSize: handleHighlightSizeChange,
+			changeDimOpacity: handleHighlightDimOpacityChange,
+		}),
+		[
+			handleSelectHighlight,
+			handleHighlightAdded,
+			handleHighlightSpanChange,
+			handleHighlightDelete,
+			handleHighlightPositionChange,
+			handleHighlightSizeChange,
+			handleHighlightDimOpacityChange,
+		],
+	);
+
+	// Prevent unused variable warning - will be used in task 12
+	void highlightHandlers;
+
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			const mod = e.ctrlKey || e.metaKey;
@@ -1001,6 +1137,15 @@ export default function VideoEditor() {
 			setSelectedSpeedId(null);
 		}
 	}, [selectedSpeedId, speedRegions]);
+
+	useEffect(() => {
+		if (
+			selectedHighlightId &&
+			!highlightRegions.some((region) => region.id === selectedHighlightId)
+		) {
+			setSelectedHighlightId(null);
+		}
+	}, [selectedHighlightId, highlightRegions]);
 
 	const handleShowExportedFile = useCallback(async (filePath: string) => {
 		try {
