@@ -953,6 +953,79 @@ export default function VideoEditor() {
 		[pushState],
 	);
 
+	// Z-index adjustment actions
+	type ZIndexAction = "bringForward" | "sendBackward" | "bringToFront" | "sendToBack";
+
+	const handleAnnotationZIndexChange = useCallback(
+		(id: string, action: ZIndexAction) => {
+			pushState((prev) => {
+				const regions = [...prev.annotationRegions];
+				const index = regions.findIndex((r) => r.id === id);
+				if (index === -1) return prev;
+
+				const current = regions[index];
+				const sortedByZ = [...regions].sort((a, b) => a.zIndex - b.zIndex);
+				const currentSortedIndex = sortedByZ.findIndex((r) => r.id === id);
+
+				switch (action) {
+					case "bringForward": {
+						// Move up one layer (swap with next higher zIndex)
+						if (currentSortedIndex < sortedByZ.length - 1) {
+							const next = sortedByZ[currentSortedIndex + 1];
+							const tempZ = current.zIndex;
+							const regionToUpdate = regions.find((r) => r.id === id);
+							const nextRegion = regions.find((r) => r.id === next.id);
+							if (regionToUpdate && nextRegion) {
+								regionToUpdate.zIndex = next.zIndex;
+								nextRegion.zIndex = tempZ;
+							}
+						}
+						break;
+					}
+					case "sendBackward": {
+						// Move down one layer (swap with next lower zIndex)
+						if (currentSortedIndex > 0) {
+							const prevRegion = sortedByZ[currentSortedIndex - 1];
+							const tempZ = current.zIndex;
+							const regionToUpdate = regions.find((r) => r.id === id);
+							const prevRegionToUpdate = regions.find((r) => r.id === prevRegion.id);
+							if (regionToUpdate && prevRegionToUpdate) {
+								regionToUpdate.zIndex = prevRegion.zIndex;
+								prevRegionToUpdate.zIndex = tempZ;
+							}
+						}
+						break;
+					}
+					case "bringToFront": {
+						// Move to top (highest zIndex)
+						const maxZ = Math.max(...regions.map((r) => r.zIndex));
+						const regionToUpdate = regions.find((r) => r.id === id);
+						if (regionToUpdate) {
+							regionToUpdate.zIndex = maxZ + 1;
+						}
+						break;
+					}
+					case "sendToBack": {
+						// Move to bottom (lowest zIndex = 1, others shift up)
+						const regionToUpdate = regions.find((r) => r.id === id);
+						if (regionToUpdate) {
+							regionToUpdate.zIndex = 1;
+							regions.forEach((r) => {
+								if (r.id !== id && r.zIndex <= current.zIndex) {
+									r.zIndex += 1;
+								}
+							});
+						}
+						break;
+					}
+				}
+
+				return { annotationRegions: regions };
+			});
+		},
+		[pushState],
+	);
+
 	// === Highlight handlers ===
 	// These handlers will be connected to child components in task 12
 
@@ -1821,6 +1894,7 @@ export default function VideoEditor() {
 						onAnnotationFigureDataChange={handleAnnotationFigureDataChange}
 						onAnnotationDelete={handleAnnotationDelete}
 						onAnnotationDuplicate={handleAnnotationDuplicate}
+						onAnnotationZIndexChange={handleAnnotationZIndexChange}
 						selectedSpeedId={selectedSpeedId}
 						selectedSpeedValue={
 							selectedSpeedId

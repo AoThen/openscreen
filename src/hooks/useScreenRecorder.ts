@@ -292,7 +292,10 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			activeRecordingId,
 		);
 
-		if (activeScreenRecorder.recorder.state === "recording" || activeScreenRecorder.recorder.state === "paused") {
+		if (
+			activeScreenRecorder.recorder.state === "recording" ||
+			activeScreenRecorder.recorder.state === "paused"
+		) {
 			try {
 				activeScreenRecorder.recorder.stop();
 			} catch {
@@ -300,7 +303,10 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			}
 		}
 		if (activeWebcamRecorder) {
-			if (activeWebcamRecorder.recorder.state === "recording" || activeWebcamRecorder.recorder.state === "paused") {
+			if (
+				activeWebcamRecorder.recorder.state === "recording" ||
+				activeWebcamRecorder.recorder.state === "paused"
+			) {
 				try {
 					activeWebcamRecorder.recorder.stop();
 				} catch {
@@ -609,7 +615,12 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		if (restarting.current) return;
 
 		const activeScreenRecorder = screenRecorder.current;
-		if (!activeScreenRecorder || (activeScreenRecorder.recorder.state !== "recording" && activeScreenRecorder.recorder.state !== "paused")) return;
+		if (
+			!activeScreenRecorder ||
+			(activeScreenRecorder.recorder.state !== "recording" &&
+				activeScreenRecorder.recorder.state !== "paused")
+		)
+			return;
 
 		const activeWebcamRecorder = webcamRecorder.current;
 		const activeRecordingId = recordingId.current;
@@ -623,7 +634,10 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			}),
 		];
 
-		if (activeWebcamRecorder?.recorder.state === "recording" || activeWebcamRecorder?.recorder.state === "paused") {
+		if (
+			activeWebcamRecorder?.recorder.state === "recording" ||
+			activeWebcamRecorder?.recorder.state === "paused"
+		) {
 			stopPromises.push(
 				new Promise<void>((resolve) => {
 					activeWebcamRecorder.recorder.addEventListener("stop", () => resolve(), {

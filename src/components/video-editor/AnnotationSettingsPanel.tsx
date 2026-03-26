@@ -3,12 +3,17 @@ import {
 	AlignCenter,
 	AlignLeft,
 	AlignRight,
+	ArrowDown,
+	ArrowDownToLine,
+	ArrowUp,
+	ArrowUpToLine,
 	Bold,
 	ChevronDown,
 	Copy,
 	Image as ImageIcon,
 	Info,
 	Italic,
+	Layers,
 	Trash2,
 	Type,
 	Underline,
@@ -35,12 +40,16 @@ import { AddCustomFontDialog } from "./AddCustomFontDialog";
 import { getArrowComponent } from "./ArrowSvgs";
 import type { AnnotationRegion, AnnotationType, ArrowDirection, FigureData } from "./types";
 
+type ZIndexAction = "bringForward" | "sendBackward" | "bringToFront" | "sendToBack";
+
 interface AnnotationSettingsPanelProps {
 	annotation: AnnotationRegion;
+	totalAnnotations?: number;
 	onContentChange: (content: string) => void;
 	onTypeChange: (type: AnnotationType) => void;
 	onStyleChange: (style: Partial<AnnotationRegion["style"]>) => void;
 	onFigureDataChange?: (figureData: FigureData) => void;
+	onZIndexChange?: (action: ZIndexAction) => void;
 	onDelete: () => void;
 	onDuplicate?: () => void;
 }
@@ -60,10 +69,12 @@ const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 
 
 export function AnnotationSettingsPanel({
 	annotation,
+	totalAnnotations = 1,
 	onContentChange,
 	onTypeChange,
 	onStyleChange,
 	onFigureDataChange,
+	onZIndexChange,
 	onDelete,
 	onDuplicate,
 }: AnnotationSettingsPanelProps) {
@@ -200,6 +211,54 @@ export function AnnotationSettingsPanel({
 						</TabsTrigger>
 					</TabsList>
 
+					{/* Layer Controls */}
+					{totalAnnotations > 1 && onZIndexChange && (
+						<div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/5">
+							<div className="flex items-center gap-2 mb-2">
+								<Layers className="w-3.5 h-3.5 text-slate-400" />
+								<span className="text-xs font-medium text-slate-300">{t("annotation.layer")}</span>
+							</div>
+							<div className="grid grid-cols-4 gap-1.5">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => onZIndexChange("bringToFront")}
+									className="h-7 bg-white/5 border-white/10 text-slate-300 hover:bg-[#34B27B] hover:text-white hover:border-[#34B27B] text-[10px] gap-1"
+									title={t("annotation.bringToFront")}
+								>
+									<ArrowUpToLine className="w-3 h-3" />
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => onZIndexChange("bringForward")}
+									className="h-7 bg-white/5 border-white/10 text-slate-300 hover:bg-[#34B27B] hover:text-white hover:border-[#34B27B] text-[10px] gap-1"
+									title={t("annotation.bringForward")}
+								>
+									<ArrowUp className="w-3 h-3" />
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => onZIndexChange("sendBackward")}
+									className="h-7 bg-white/5 border-white/10 text-slate-300 hover:bg-[#34B27B] hover:text-white hover:border-[#34B27B] text-[10px] gap-1"
+									title={t("annotation.sendBackward")}
+								>
+									<ArrowDown className="w-3 h-3" />
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => onZIndexChange("sendToBack")}
+									className="h-7 bg-white/5 border-white/10 text-slate-300 hover:bg-[#34B27B] hover:text-white hover:border-[#34B27B] text-[10px] gap-1"
+									title={t("annotation.sendToBack")}
+								>
+									<ArrowDownToLine className="w-3 h-3" />
+								</Button>
+							</div>
+						</div>
+					)}
+
 					{/* Text Content */}
 					<TabsContent value="text" className="mt-0 space-y-4">
 						<div>
@@ -246,11 +305,7 @@ export function AnnotationSettingsPanel({
 														{t("annotation.systemFonts")}
 													</div>
 													{systemFonts.map((font) => (
-														<SelectItem
-															key={font}
-															value={font}
-															style={{ fontFamily: font }}
-														>
+														<SelectItem key={font} value={font} style={{ fontFamily: font }}>
 															{font}
 														</SelectItem>
 													))}

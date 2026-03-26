@@ -4,7 +4,19 @@ import { BsRecordCircle } from "react-icons/bs";
 import { FaRegStopCircle } from "react-icons/fa";
 import { FaFolderOpen } from "react-icons/fa6";
 import { FiMinus, FiX } from "react-icons/fi";
-import { MdMic, MdMicOff, MdMonitor, MdPause, MdPlayArrow, MdRestartAlt, MdVideocam, MdVideocamOff, MdVideoFile, MdVolumeOff, MdVolumeUp } from "react-icons/md";
+import {
+	MdMic,
+	MdMicOff,
+	MdMonitor,
+	MdPause,
+	MdPlayArrow,
+	MdRestartAlt,
+	MdVideocam,
+	MdVideocamOff,
+	MdVideoFile,
+	MdVolumeOff,
+	MdVolumeUp,
+} from "react-icons/md";
 import { RxDragHandleDots2 } from "react-icons/rx";
 import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { type Locale, SUPPORTED_LOCALES } from "@/i18n/config";
@@ -304,7 +316,11 @@ export function LaunchWindow() {
 					{/* Record/Stop group */}
 					<button
 						className={`flex items-center gap-0.5 rounded-full p-2 transition-colors duration-150 ${styles.electronNoDrag} ${
-							recording && !paused ? "animate-record-pulse bg-red-500/10" : recording && paused ? "bg-yellow-500/10" : "bg-white/5 hover:bg-white/[0.08]"
+							recording && !paused
+								? "animate-record-pulse bg-red-500/10"
+								: recording && paused
+									? "bg-yellow-500/10"
+									: "bg-white/5 hover:bg-white/[0.08]"
 						}`}
 						onClick={hasSelectedSource ? toggleRecording : openSourceSelector}
 						disabled={!hasSelectedSource && !recording}
@@ -313,7 +329,9 @@ export function LaunchWindow() {
 						{recording ? (
 							<>
 								{getIcon("stop", paused ? "text-yellow-400" : "text-red-400")}
-								<span className={`${paused ? "text-yellow-400" : "text-red-400"} text-xs font-semibold tabular-nums`}>
+								<span
+									className={`${paused ? "text-yellow-400" : "text-red-400"} text-xs font-semibold tabular-nums`}
+								>
 									{formatTimePadded(elapsed)}
 								</span>
 							</>
@@ -324,14 +342,14 @@ export function LaunchWindow() {
 
 					{/* Pause/Resume recording */}
 					{recording && (
-						<Tooltip content={paused ? t("tooltips.resumeRecording") : t("tooltips.pauseRecording")}>
+						<Tooltip
+							content={paused ? t("tooltips.resumeRecording") : t("tooltips.pauseRecording")}
+						>
 							<button
 								className={`${hudIconBtnClasses} ${styles.electronNoDrag} ${paused ? "drop-shadow-[0_0_4px_rgba(250,204,21,0.4)]" : ""}`}
 								onClick={paused ? resumeRecording : pauseRecording}
 							>
-								{paused
-									? getIcon("play", "text-yellow-400")
-									: getIcon("pause", "text-white/60")}
+								{paused ? getIcon("play", "text-yellow-400") : getIcon("pause", "text-white/60")}
 							</button>
 						</Tooltip>
 					)}

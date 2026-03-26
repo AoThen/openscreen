@@ -328,9 +328,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const currentTimeMs = currentTime * 1000;
 
 		const activeHighlight = useMemo(() => {
-			return highlightRegions.find(
-				h => currentTimeMs >= h.startMs && currentTimeMs < h.endMs
-			);
+			return highlightRegions.find((h) => currentTimeMs >= h.startMs && currentTimeMs < h.endMs);
 		}, [highlightRegions, currentTimeMs]);
 
 		useImperativeHandle(ref, () => ({

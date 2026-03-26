@@ -24,6 +24,8 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
 	// Another instance is already running, quit this one
 	app.quit();
+	// Exit immediately to prevent any further initialization
+	process.exit(0);
 }
 
 // Use Screen & System Audio Recording permissions instead of CoreAudio Tap API on macOS.

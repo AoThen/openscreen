@@ -418,7 +418,11 @@ export class FrameRenderer {
 		}
 
 		// Render highlight mask
-		if (this.config.highlightRegions && this.config.highlightRegions.length > 0 && this.compositeCtx) {
+		if (
+			this.config.highlightRegions &&
+			this.config.highlightRegions.length > 0 &&
+			this.compositeCtx
+		) {
 			const activeHighlight = this.config.highlightRegions.find(
 				(h) => timeMs >= h.startMs && timeMs < h.endMs,
 			);

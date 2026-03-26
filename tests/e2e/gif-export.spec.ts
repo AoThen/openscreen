@@ -17,6 +17,9 @@ test("exports a GIF from a loaded video", async () => {
 			MAIN_JS,
 			// Required in CI sandbox environments (GitHub Actions, Docker, etc.)
 			"--no-sandbox",
+			// Disable GPU in CI environments (no real GPU available)
+			"--disable-gpu",
+			"--disable-software-rasterizer",
 		],
 		env: {
 			...process.env,
