@@ -1672,6 +1672,11 @@ export default function VideoEditor() {
 											onSelectAnnotation={handleSelectAnnotation}
 											onAnnotationPositionChange={handleAnnotationPositionChange}
 											onAnnotationSizeChange={handleAnnotationSizeChange}
+											highlightRegions={highlightRegions}
+											selectedHighlightId={selectedHighlightId}
+											onSelectHighlight={setSelectedHighlightId}
+											onHighlightPositionChange={handleHighlightPositionChange}
+											onHighlightSizeChange={handleHighlightSizeChange}
 										/>
 									</div>
 								</div>

@@ -31,8 +31,10 @@ import {
 	getNativeAspectRatioValue,
 } from "@/utils/aspectRatioUtils";
 import { AnnotationOverlay } from "./AnnotationOverlay";
+import { HighlightMask, HighlightOverlay } from "./HighlightOverlay";
 import {
 	type AnnotationRegion,
+	type HighlightRegion,
 	type SpeedRegion,
 	type TrimRegion,
 	ZOOM_DEPTH_SCALES,
@@ -93,6 +95,11 @@ interface VideoPlaybackProps {
 	onSelectAnnotation?: (id: string | null) => void;
 	onAnnotationPositionChange?: (id: string, position: { x: number; y: number }) => void;
 	onAnnotationSizeChange?: (id: string, size: { width: number; height: number }) => void;
+	highlightRegions: HighlightRegion[];
+	selectedHighlightId: string | null;
+	onSelectHighlight: (id: string | null) => void;
+	onHighlightPositionChange: (id: string, position: { x: number; y: number }) => void;
+	onHighlightSizeChange: (id: string, size: { width: number; height: number }) => void;
 }
 
 export interface VideoPlaybackRef {
@@ -141,6 +148,11 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			onSelectAnnotation,
 			onAnnotationPositionChange,
 			onAnnotationSizeChange,
+			highlightRegions,
+			selectedHighlightId,
+			onSelectHighlight,
+			onHighlightPositionChange,
+			onHighlightSizeChange,
 		},
 		ref,
 	) => {
@@ -312,6 +324,14 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			if (!selectedZoomId) return null;
 			return zoomRegions.find((region) => region.id === selectedZoomId) ?? null;
 		}, [zoomRegions, selectedZoomId]);
+
+		const currentTimeMs = currentTime * 1000;
+
+		const activeHighlight = useMemo(() => {
+			return highlightRegions.find(
+				h => currentTimeMs >= h.startMs && currentTimeMs < h.endMs
+			);
+		}, [highlightRegions, currentTimeMs]);
 
 		useImperativeHandle(ref, () => ({
 			video: videoRef.current,
@@ -1206,6 +1226,28 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 							className="absolute rounded-md border border-[#34B27B]/80 bg-[#34B27B]/20 shadow-[0_0_0_1px_rgba(52,178,123,0.35)]"
 							style={{ display: "none", pointerEvents: "none" }}
 						/>
+						{/* Highlight mask - dim effect outside highlight region */}
+						{activeHighlight && (
+							<HighlightMask
+								highlight={activeHighlight}
+								containerWidth={overlayRef.current?.clientWidth || 800}
+								containerHeight={overlayRef.current?.clientHeight || 600}
+							/>
+						)}
+						{/* Highlight overlay for editing */}
+						{highlightRegions.map((highlight) => (
+							<HighlightOverlay
+								key={highlight.id}
+								highlight={highlight}
+								isSelected={highlight.id === selectedHighlightId}
+								containerWidth={overlayRef.current?.clientWidth || 800}
+								containerHeight={overlayRef.current?.clientHeight || 600}
+								onPositionChange={onHighlightPositionChange}
+								onSizeChange={onHighlightSizeChange}
+								onClick={(id) => onSelectHighlight(id)}
+								zIndex={0}
+							/>
+						))}
 						{(() => {
 							const filtered = (annotationRegions || []).filter((annotation) => {
 								if (typeof annotation.startMs !== "number" || typeof annotation.endMs !== "number")
