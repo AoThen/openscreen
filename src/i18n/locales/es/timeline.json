@@ -4,13 +4,15 @@
 		"suggestZooms": "Sugerir zooms desde el cursor",
 		"addTrim": "Agregar recorte (T)",
 		"addAnnotation": "Agregar anotación (A)",
-		"addSpeed": "Agregar velocidad (S)"
+		"addSpeed": "Agregar velocidad (S)",
+		"addHighlight": "Resaltar"
 	},
 	"hints": {
 		"pressZoom": "Presiona Z para agregar zoom",
 		"pressTrim": "Presiona T para agregar recorte",
 		"pressAnnotation": "Presiona A para agregar anotación",
-		"pressSpeed": "Presiona S para agregar velocidad"
+		"pressSpeed": "Presiona S para agregar velocidad",
+		"pressHighlight": "Presiona H para añadir región resaltada"
 	},
 	"labels": {
 		"pan": "Desplazar",
@@ -20,7 +22,8 @@
 		"speedItem": "Velocidad {{index}}",
 		"annotationItem": "Anotación",
 		"imageItem": "Imagen",
-		"emptyText": "Texto vacío"
+		"emptyText": "Texto vacío",
+		"highlightItem": "Resaltar"
 	},
 	"emptyState": {
 		"noVideo": "No hay video cargado",

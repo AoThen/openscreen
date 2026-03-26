@@ -12,6 +12,11 @@
 	"trim": {
 		"deleteRegion": "Eliminar región de recorte"
 	},
+	"highlight": {
+		"title": "Configuración de resaltado",
+		"dimOpacity": "Opacidad de oscurecimiento",
+		"delete": "Eliminar resaltado"
+	},
 	"layout": {
 		"title": "Diseño",
 		"preset": "Predefinido",

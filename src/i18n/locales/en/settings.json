@@ -12,6 +12,11 @@
 	"trim": {
 		"deleteRegion": "Delete Trim Region"
 	},
+	"highlight": {
+		"title": "Highlight Settings",
+		"dimOpacity": "Dim Opacity",
+		"delete": "Delete Highlight"
+	},
 	"layout": {
 		"title": "Layout",
 		"preset": "Preset",

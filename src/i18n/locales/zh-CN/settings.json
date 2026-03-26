@@ -12,6 +12,11 @@
 	"trim": {
 		"deleteRegion": "删除剪辑区域"
 	},
+	"highlight": {
+		"title": "高亮设置",
+		"dimOpacity": "暗淡透明度",
+		"delete": "删除高亮"
+	},
 	"layout": {
 		"title": "布局",
 		"preset": "预设",
