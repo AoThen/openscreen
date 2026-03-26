@@ -41,7 +41,10 @@ const WEBCAM_TARGET_FRAME_RATE = 30;
 
 type UseScreenRecorderReturn = {
 	recording: boolean;
+	paused: boolean;
 	toggleRecording: () => void;
+	pauseRecording: () => void;
+	resumeRecording: () => void;
 	restartRecording: () => void;
 	microphoneEnabled: boolean;
 	setMicrophoneEnabled: (enabled: boolean) => void;
@@ -83,6 +86,7 @@ function createRecorderHandle(stream: MediaStream, options: MediaRecorderOptions
 export function useScreenRecorder(): UseScreenRecorderReturn {
 	const t = useScopedT("editor");
 	const [recording, setRecording] = useState(false);
+	const [paused, setPaused] = useState(false);
 	const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
 	const [microphoneDeviceId, setMicrophoneDeviceId] = useState<string | undefined>(undefined);
 	const [systemAudioEnabled, setSystemAudioEnabled] = useState(false);
@@ -95,6 +99,8 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	const webcamStream = useRef<MediaStream | null>(null);
 	const mixingContext = useRef<AudioContext | null>(null);
 	const startTime = useRef<number>(0);
+	const pausedTime = useRef<number>(0); // 累计暂停时长
+	const pauseStartTime = useRef<number>(0); // 本次暂停开始时间
 	const recordingId = useRef<number>(0);
 	const finalizingRecordingId = useRef<number | null>(null);
 	const allowAutoFinalize = useRef(false);
@@ -199,6 +205,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 			teardownMedia();
 			setRecording(false);
+			setPaused(false);
 			window.electronAPI?.setRecordingState(false);
 
 			void (async () => {
@@ -270,7 +277,12 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		}
 
 		const activeWebcamRecorder = webcamRecorder.current;
-		const duration = Date.now() - startTime.current;
+		// 计算实际录制时长：总时间 - 累计暂停时间 - 如果当前暂停中，减去当前暂停时间
+		let totalPausedTime = pausedTime.current;
+		if (paused && pauseStartTime.current > 0) {
+			totalPausedTime += Date.now() - pauseStartTime.current;
+		}
+		const duration = Date.now() - startTime.current - totalPausedTime;
 		const activeRecordingId = recordingId.current;
 
 		finalizeRecording(
@@ -280,7 +292,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			activeRecordingId,
 		);
 
-		if (activeScreenRecorder.recorder.state === "recording") {
+		if (activeScreenRecorder.recorder.state === "recording" || activeScreenRecorder.recorder.state === "paused") {
 			try {
 				activeScreenRecorder.recorder.stop();
 			} catch {
@@ -288,7 +300,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			}
 		}
 		if (activeWebcamRecorder) {
-			if (activeWebcamRecorder.recorder.state === "recording") {
+			if (activeWebcamRecorder.recorder.state === "recording" || activeWebcamRecorder.recorder.state === "paused") {
 				try {
 					activeWebcamRecorder.recorder.stop();
 				} catch {
@@ -509,8 +521,11 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 			recordingId.current = Date.now();
 			startTime.current = recordingId.current;
+			pausedTime.current = 0;
+			pauseStartTime.current = 0;
 			allowAutoFinalize.current = true;
 			setRecording(true);
+			setPaused(false);
 			window.electronAPI?.setRecordingState(true);
 
 			const activeScreenRecorder = screenRecorder.current;
@@ -552,11 +567,49 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		recording ? stopRecording.current() : startRecording();
 	};
 
+	const pauseRecording = () => {
+		if (!recording || paused) return;
+
+		const activeScreenRecorder = screenRecorder.current;
+		const activeWebcamRecorder = webcamRecorder.current;
+
+		if (activeScreenRecorder?.recorder.state === "recording") {
+			activeScreenRecorder.recorder.pause();
+		}
+		if (activeWebcamRecorder?.recorder.state === "recording") {
+			activeWebcamRecorder.recorder.pause();
+		}
+
+		pauseStartTime.current = Date.now();
+		setPaused(true);
+	};
+
+	const resumeRecording = () => {
+		if (!recording || !paused) return;
+
+		const activeScreenRecorder = screenRecorder.current;
+		const activeWebcamRecorder = webcamRecorder.current;
+
+		if (activeScreenRecorder?.recorder.state === "paused") {
+			activeScreenRecorder.recorder.resume();
+		}
+		if (activeWebcamRecorder?.recorder.state === "paused") {
+			activeWebcamRecorder.recorder.resume();
+		}
+
+		// 累加暂停时长
+		if (pauseStartTime.current > 0) {
+			pausedTime.current += Date.now() - pauseStartTime.current;
+			pauseStartTime.current = 0;
+		}
+		setPaused(false);
+	};
+
 	const restartRecording = async () => {
 		if (restarting.current) return;
 
 		const activeScreenRecorder = screenRecorder.current;
-		if (!activeScreenRecorder || activeScreenRecorder.recorder.state !== "recording") return;
+		if (!activeScreenRecorder || (activeScreenRecorder.recorder.state !== "recording" && activeScreenRecorder.recorder.state !== "paused")) return;
 
 		const activeWebcamRecorder = webcamRecorder.current;
 		const activeRecordingId = recordingId.current;
@@ -570,7 +623,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			}),
 		];
 
-		if (activeWebcamRecorder?.recorder.state === "recording") {
+		if (activeWebcamRecorder?.recorder.state === "recording" || activeWebcamRecorder?.recorder.state === "paused") {
 			stopPromises.push(
 				new Promise<void>((resolve) => {
 					activeWebcamRecorder.recorder.addEventListener("stop", () => resolve(), {
@@ -592,7 +645,10 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 	return {
 		recording,
+		paused,
 		toggleRecording,
+		pauseRecording,
+		resumeRecording,
 		restartRecording,
 		microphoneEnabled,
 		setMicrophoneEnabled,

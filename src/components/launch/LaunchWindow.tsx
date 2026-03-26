@@ -4,17 +4,7 @@ import { BsRecordCircle } from "react-icons/bs";
 import { FaRegStopCircle } from "react-icons/fa";
 import { FaFolderOpen } from "react-icons/fa6";
 import { FiMinus, FiX } from "react-icons/fi";
-import {
-	MdMic,
-	MdMicOff,
-	MdMonitor,
-	MdRestartAlt,
-	MdVideocam,
-	MdVideocamOff,
-	MdVideoFile,
-	MdVolumeOff,
-	MdVolumeUp,
-} from "react-icons/md";
+import { MdMic, MdMicOff, MdMonitor, MdPause, MdPlayArrow, MdRestartAlt, MdVideocam, MdVideocamOff, MdVideoFile, MdVolumeOff, MdVolumeUp } from "react-icons/md";
 import { RxDragHandleDots2 } from "react-icons/rx";
 import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { type Locale, SUPPORTED_LOCALES } from "@/i18n/config";
@@ -41,6 +31,8 @@ const ICON_CONFIG = {
 	webcamOn: { icon: MdVideocam, size: ICON_SIZE },
 	webcamOff: { icon: MdVideocamOff, size: ICON_SIZE },
 	stop: { icon: FaRegStopCircle, size: ICON_SIZE },
+	pause: { icon: MdPause, size: ICON_SIZE },
+	play: { icon: MdPlayArrow, size: ICON_SIZE },
 	restart: { icon: MdRestartAlt, size: ICON_SIZE },
 	record: { icon: BsRecordCircle, size: ICON_SIZE },
 	videoFile: { icon: MdVideoFile, size: ICON_SIZE },
@@ -76,7 +68,10 @@ export function LaunchWindow() {
 
 	const {
 		recording,
+		paused,
 		toggleRecording,
+		pauseRecording,
+		resumeRecording,
 		restartRecording,
 		microphoneEnabled,
 		setMicrophoneEnabled,
@@ -106,14 +101,14 @@ export function LaunchWindow() {
 
 	useEffect(() => {
 		let timer: NodeJS.Timeout | null = null;
-		if (recording) {
+		if (recording && !paused) {
 			if (!recordingStart) setRecordingStart(Date.now());
 			timer = setInterval(() => {
 				if (recordingStart) {
 					setElapsed(Math.floor((Date.now() - recordingStart) / 1000));
 				}
 			}, 1000);
-		} else {
+		} else if (!recording) {
 			setRecordingStart(null);
 			setElapsed(0);
 			if (timer) clearInterval(timer);
@@ -121,7 +116,7 @@ export function LaunchWindow() {
 		return () => {
 			if (timer) clearInterval(timer);
 		};
-	}, [recording, recordingStart]);
+	}, [recording, paused, recordingStart]);
 
 	useEffect(() => {
 		if (!import.meta.env.DEV) {
@@ -309,7 +304,7 @@ export function LaunchWindow() {
 					{/* Record/Stop group */}
 					<button
 						className={`flex items-center gap-0.5 rounded-full p-2 transition-colors duration-150 ${styles.electronNoDrag} ${
-							recording ? "animate-record-pulse bg-red-500/10" : "bg-white/5 hover:bg-white/[0.08]"
+							recording && !paused ? "animate-record-pulse bg-red-500/10" : recording && paused ? "bg-yellow-500/10" : "bg-white/5 hover:bg-white/[0.08]"
 						}`}
 						onClick={hasSelectedSource ? toggleRecording : openSourceSelector}
 						disabled={!hasSelectedSource && !recording}
@@ -317,8 +312,8 @@ export function LaunchWindow() {
 					>
 						{recording ? (
 							<>
-								{getIcon("stop", "text-red-400")}
-								<span className="text-red-400 text-xs font-semibold tabular-nums">
+								{getIcon("stop", paused ? "text-yellow-400" : "text-red-400")}
+								<span className={`${paused ? "text-yellow-400" : "text-red-400"} text-xs font-semibold tabular-nums`}>
 									{formatTimePadded(elapsed)}
 								</span>
 							</>
@@ -326,6 +321,20 @@ export function LaunchWindow() {
 							getIcon("record", hasSelectedSource ? "text-white/80" : "text-white/30")
 						)}
 					</button>
+
+					{/* Pause/Resume recording */}
+					{recording && (
+						<Tooltip content={paused ? t("tooltips.resumeRecording") : t("tooltips.pauseRecording")}>
+							<button
+								className={`${hudIconBtnClasses} ${styles.electronNoDrag} ${paused ? "drop-shadow-[0_0_4px_rgba(250,204,21,0.4)]" : ""}`}
+								onClick={paused ? resumeRecording : pauseRecording}
+							>
+								{paused
+									? getIcon("play", "text-yellow-400")
+									: getIcon("pause", "text-white/60")}
+							</button>
+						</Tooltip>
+					)}
 
 					{/* Restart recording */}
 					{recording && (
