@@ -198,7 +198,10 @@ export function clampHighlightPosition(pos: { x: number; y: number }): { x: numb
 	};
 }
 
-export function clampHighlightSize(size: { width: number; height: number }): { width: number; height: number } {
+export function clampHighlightSize(size: { width: number; height: number }): {
+	width: number;
+	height: number;
+} {
 	return {
 		width: clamp(size.width, 1, 100),
 		height: clamp(size.height, 1, 100),
