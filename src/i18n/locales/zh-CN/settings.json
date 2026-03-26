@@ -111,6 +111,7 @@
 		"arrowDirection": "箭头方向",
 		"strokeWidth": "描边宽度：{{width}}px",
 		"arrowColor": "箭头颜色",
+		"duplicateAnnotation": "复制标注",
 		"deleteAnnotation": "删除标注",
 		"shortcutsAndTips": "快捷键与提示",
 		"tipMovePlayhead": "将播放头移动到重叠的标注区域并选择一个项目。",

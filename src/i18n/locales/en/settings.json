@@ -111,6 +111,7 @@
 		"arrowDirection": "Arrow Direction",
 		"strokeWidth": "Stroke Width: {{width}}px",
 		"arrowColor": "Arrow Color",
+		"duplicateAnnotation": "Duplicate",
 		"deleteAnnotation": "Delete Annotation",
 		"shortcutsAndTips": "Shortcuts & Tips",
 		"tipMovePlayhead": "Move playhead to overlapping annotation section and select an item.",

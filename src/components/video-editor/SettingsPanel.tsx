@@ -136,6 +136,7 @@ interface SettingsPanelProps {
 	onAnnotationStyleChange?: (id: string, style: Partial<AnnotationRegion["style"]>) => void;
 	onAnnotationFigureDataChange?: (id: string, figureData: FigureData) => void;
 	onAnnotationDelete?: (id: string) => void;
+	onAnnotationDuplicate?: (id: string) => void;
 	selectedSpeedId?: string | null;
 	selectedSpeedValue?: PlaybackSpeed | null;
 	onSpeedChange?: (speed: PlaybackSpeed) => void;
@@ -204,6 +205,7 @@ export function SettingsPanel({
 	onAnnotationStyleChange,
 	onAnnotationFigureDataChange,
 	onAnnotationDelete,
+	onAnnotationDuplicate,
 	selectedSpeedId,
 	selectedSpeedValue,
 	onSpeedChange,
@@ -455,6 +457,7 @@ export function SettingsPanel({
 						: undefined
 				}
 				onDelete={() => onAnnotationDelete(selectedAnnotation.id)}
+				onDuplicate={onAnnotationDuplicate ? () => onAnnotationDuplicate(selectedAnnotation.id) : undefined}
 			/>
 		);
 	}

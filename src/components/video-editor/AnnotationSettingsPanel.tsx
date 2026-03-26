@@ -5,6 +5,7 @@ import {
 	AlignRight,
 	Bold,
 	ChevronDown,
+	Copy,
 	Image as ImageIcon,
 	Info,
 	Italic,
@@ -41,6 +42,7 @@ interface AnnotationSettingsPanelProps {
 	onStyleChange: (style: Partial<AnnotationRegion["style"]>) => void;
 	onFigureDataChange?: (figureData: FigureData) => void;
 	onDelete: () => void;
+	onDuplicate?: () => void;
 }
 
 const FONT_FAMILIES = [
@@ -63,6 +65,7 @@ export function AnnotationSettingsPanel({
 	onStyleChange,
 	onFigureDataChange,
 	onDelete,
+	onDuplicate,
 }: AnnotationSettingsPanelProps) {
 	const t = useScopedT("settings");
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -622,6 +625,18 @@ export function AnnotationSettingsPanel({
 						</div>
 					</TabsContent>
 				</Tabs>
+
+				{onDuplicate && (
+					<Button
+						onClick={onDuplicate}
+						variant="outline"
+						size="sm"
+						className="w-full gap-2 bg-white/5 text-slate-200 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all mt-4"
+					>
+						<Copy className="w-4 h-4" />
+						{t("annotation.duplicateAnnotation")}
+					</Button>
+				)}
 
 				<Button
 					onClick={onDelete}

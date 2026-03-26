@@ -824,6 +824,31 @@ export default function VideoEditor() {
 		[selectedAnnotationId, pushState],
 	);
 
+	const handleAnnotationDuplicate = useCallback(
+		(id: string) => {
+			const regionToDuplicate = annotationRegions.find((r) => r.id === id);
+			if (!regionToDuplicate) return;
+
+			const newId = `annotation-${nextAnnotationIdRef.current++}`;
+			const newZIndex = nextAnnotationZIndexRef.current++;
+			const duplicatedRegion: AnnotationRegion = {
+				...regionToDuplicate,
+				id: newId,
+				zIndex: newZIndex,
+				position: {
+					x: Math.min(regionToDuplicate.position.x + 5, 100 - regionToDuplicate.size.width),
+					y: Math.min(regionToDuplicate.position.y + 5, 100 - regionToDuplicate.size.height),
+				},
+			};
+
+			pushState((prev) => ({
+				annotationRegions: [...prev.annotationRegions, duplicatedRegion],
+			}));
+			setSelectedAnnotationId(newId);
+		},
+		[annotationRegions, pushState],
+	);
+
 	const handleAnnotationContentChange = useCallback(
 		(id: string, content: string) => {
 			pushState((prev) => ({
@@ -1645,6 +1670,7 @@ export default function VideoEditor() {
 						onAnnotationStyleChange={handleAnnotationStyleChange}
 						onAnnotationFigureDataChange={handleAnnotationFigureDataChange}
 						onAnnotationDelete={handleAnnotationDelete}
+						onAnnotationDuplicate={handleAnnotationDuplicate}
 						selectedSpeedId={selectedSpeedId}
 						selectedSpeedValue={
 							selectedSpeedId
