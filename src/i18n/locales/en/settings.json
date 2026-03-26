@@ -30,11 +30,14 @@
 	},
 	"background": {
 		"title": "Background",
+		"none": "None",
 		"image": "Image",
 		"color": "Color",
 		"gradient": "Gradient",
 		"uploadCustom": "Upload Custom",
-		"gradientLabel": "Gradient {{index}}"
+		"gradientLabel": "Gradient {{index}}",
+		"useNoBackground": "Use No Background",
+		"noBackgroundHint": "Video will fill the entire frame with no background."
 	},
 	"crop": {
 		"title": "Crop",

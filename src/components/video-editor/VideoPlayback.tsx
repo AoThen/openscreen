@@ -1050,6 +1050,12 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		useEffect(() => {
 			let mounted = true;
 			(async () => {
+				// 处理无背景选项
+				if (wallpaper === "none") {
+					if (mounted) setResolvedWallpaper("none");
+					return;
+				}
+
 				try {
 					if (!wallpaper) {
 						const def = await getAssetPath("wallpapers/wallpaper1.jpg");
@@ -1110,11 +1116,13 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 		const isImageUrl = Boolean(
 			resolvedWallpaper &&
+				resolvedWallpaper !== "none" &&
 				(resolvedWallpaper.startsWith("file://") ||
 					resolvedWallpaper.startsWith("http") ||
 					resolvedWallpaper.startsWith("/") ||
 					resolvedWallpaper.startsWith("data:")),
 		);
+		const isNoBackground = resolvedWallpaper === "none";
 		const backgroundStyle = isImageUrl
 			? { backgroundImage: `url(${resolvedWallpaper || ""})` }
 			: { background: resolvedWallpaper || "" };
@@ -1134,16 +1142,19 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 								)
 							: undefined,
 					),
+					backgroundColor: isNoBackground ? "transparent" : undefined,
 				}}
 			>
 				{/* Background layer - always render as DOM element with blur */}
-				<div
-					className="absolute inset-0 bg-cover bg-center"
-					style={{
-						...backgroundStyle,
-						filter: showBlur ? "blur(2px)" : "none",
-					}}
-				/>
+				{!isNoBackground && (
+					<div
+						className="absolute inset-0 bg-cover bg-center"
+						style={{
+							...backgroundStyle,
+							filter: showBlur ? "blur(2px)" : "none",
+						}}
+					/>
+				)}
 				<div
 					ref={containerRef}
 					className="absolute inset-0"

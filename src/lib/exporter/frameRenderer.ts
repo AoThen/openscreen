@@ -201,6 +201,12 @@ export class FrameRenderer {
 	private async setupBackground(): Promise<void> {
 		const wallpaper = this.config.wallpaper;
 
+		// 处理无背景选项 - 保持透明
+		if (wallpaper === "none") {
+			// 不渲染背景层，保持透明
+			return;
+		}
+
 		// Create background canvas for separate rendering (not affected by zoom)
 		const bgCanvas = document.createElement("canvas");
 		bgCanvas.width = this.config.width;

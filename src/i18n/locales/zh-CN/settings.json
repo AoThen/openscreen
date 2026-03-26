@@ -30,11 +30,14 @@
 	},
 	"background": {
 		"title": "背景",
+		"none": "无",
 		"image": "图片",
 		"color": "颜色",
 		"gradient": "渐变",
 		"uploadCustom": "上传自定义",
-		"gradientLabel": "渐变 {{index}}"
+		"gradientLabel": "渐变 {{index}}",
+		"useNoBackground": "使用无背景",
+		"noBackgroundHint": "视频将填满整个画面，不显示背景。"
 	},
 	"crop": {
 		"title": "裁剪",

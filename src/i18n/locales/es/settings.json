@@ -30,11 +30,14 @@
 	},
 	"background": {
 		"title": "Fondo",
+		"none": "Ninguno",
 		"image": "Imagen",
 		"color": "Color",
 		"gradient": "Degradado",
 		"uploadCustom": "Subir personalizado",
-		"gradientLabel": "Degradado {{index}}"
+		"gradientLabel": "Degradado {{index}}",
+		"useNoBackground": "Usar sin fondo",
+		"noBackgroundHint": "El video llenará todo el marco sin fondo."
 	},
 	"crop": {
 		"title": "Recortar",

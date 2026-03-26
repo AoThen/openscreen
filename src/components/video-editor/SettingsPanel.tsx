@@ -751,7 +751,13 @@ export function SettingsPanel({
 						</AccordionTrigger>
 						<AccordionContent className="pb-3">
 							<Tabs defaultValue="image" className="w-full">
-								<TabsList className="mb-2 bg-white/5 border border-white/5 p-0.5 w-full grid grid-cols-3 h-7 rounded-lg">
+								<TabsList className="mb-2 bg-white/5 border border-white/5 p-0.5 w-full grid grid-cols-4 h-7 rounded-lg">
+									<TabsTrigger
+										value="none"
+										className="data-[state=active]:bg-[#34B27B] data-[state=active]:text-white text-slate-400 text-[10px] py-1 rounded-md transition-all"
+									>
+										{t("background.none")}
+									</TabsTrigger>
 									<TabsTrigger
 										value="image"
 										className="data-[state=active]:bg-[#34B27B] data-[state=active]:text-white text-slate-400 text-[10px] py-1 rounded-md transition-all"
@@ -773,6 +779,23 @@ export function SettingsPanel({
 								</TabsList>
 
 								<div className="max-h-[min(200px,25vh)] overflow-y-auto custom-scrollbar">
+									<TabsContent value="none" className="mt-0">
+										<div className="p-2 text-center">
+											<Button
+												onClick={() => onWallpaperChange("none")}
+												variant="outline"
+												className={cn(
+													"w-full gap-2 bg-white/5 text-slate-200 border-white/10 hover:bg-[#34B27B] hover:text-white hover:border-[#34B27B] transition-all h-7 text-[10px]",
+													selected === "none" && "bg-[#34B27B] text-white border-[#34B27B]",
+												)}
+											>
+												{t("background.useNoBackground")}
+											</Button>
+											<p className="text-[10px] text-slate-500 mt-2">
+												{t("background.noBackgroundHint")}
+											</p>
+										</div>
+									</TabsContent>
 									<TabsContent value="image" className="mt-0 space-y-2">
 										<input
 											type="file"
