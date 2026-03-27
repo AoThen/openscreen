@@ -89,6 +89,41 @@ interface LayoutCache {
 	webcamRect: StyledRenderRect | null;
 }
 
+/**
+ * Detects if the current WebGL renderer is a software renderer.
+ * Software renderers like SwiftShader have performance limitations
+ * and should use simplified rendering paths.
+ */
+function detectSoftwareRenderer(): boolean {
+	try {
+		const canvas = document.createElement("canvas");
+		const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+		if (!gl) return true; // No WebGL support means we need fallback
+
+		const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+		if (!debugInfo) return false; // Can't detect, assume hardware
+
+		const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || "";
+		// Common software renderers: SwiftShader, llvmpipe, Mesa software
+		return /swiftshader|llvmpipe|software|microsoft basic render|mesa/i.test(renderer);
+	} catch {
+		return true; // On error, assume software renderer for safety
+	}
+}
+
+// Global flag for software renderer detection (cached after first check)
+let _isSoftwareRenderer: boolean | null = null;
+
+function isSoftwareRenderer(): boolean {
+	if (_isSoftwareRenderer === null) {
+		_isSoftwareRenderer = detectSoftwareRenderer();
+		if (_isSoftwareRenderer) {
+			console.warn("[FrameRenderer] Software renderer detected - using simplified rendering path");
+		}
+	}
+	return _isSoftwareRenderer;
+}
+
 // Renders video frames with all effects (background, zoom, crop, blur, shadow) to an offscreen canvas for export.
 
 export class FrameRenderer {
@@ -104,6 +139,13 @@ export class FrameRenderer {
 	private shadowCtx: CanvasRenderingContext2D | null = null;
 	private compositeCanvas: HTMLCanvasElement | null = null;
 	private compositeCtx: CanvasRenderingContext2D | null = null;
+	// Cached canvases for blur mask rendering (avoid per-frame allocation)
+	private blurTempCanvas: HTMLCanvasElement | null = null;
+	private blurTempCtx: CanvasRenderingContext2D | null = null;
+	private blurRegionCanvas: HTMLCanvasElement | null = null;
+	private blurRegionCtx: CanvasRenderingContext2D | null = null;
+	private blurMaskCanvas: HTMLCanvasElement | null = null;
+	private blurMaskCtx: CanvasRenderingContext2D | null = null;
 	private config: FrameRenderConfig;
 	private animationState: AnimationState;
 	private layoutCache: LayoutCache | null = null;
@@ -139,14 +181,18 @@ export class FrameRenderer {
 			console.warn("[FrameRenderer] colorSpace not supported on this platform:", error);
 		}
 
+		// Detect software renderer for optimization
+		const useSimplifiedPath = isSoftwareRenderer();
+
 		// Initialize PixiJS with optimized settings for export performance
+		// Note: PixiJS v8 doesn't support forceCanvas, so we optimize via simplified blur rendering
 		this.app = new Application();
 		await this.app.init({
 			canvas,
 			width: this.config.width,
 			height: this.config.height,
 			backgroundAlpha: 0,
-			antialias: true,
+			antialias: !useSimplifiedPath, // Disable antialias for software renderers
 			resolution: 1,
 			autoDensity: true,
 		});
@@ -485,6 +531,7 @@ export class FrameRenderer {
 	/**
 	 * Renders a blur mask on the canvas.
 	 * Uses temporary canvas for blur processing with feathering support.
+	 * Optimized for software renderers (SwiftShader) with cached canvases.
 	 */
 	private renderBlurMask(
 		ctx: CanvasRenderingContext2D,
@@ -497,34 +544,54 @@ export class FrameRenderer {
 
 		const x = (position.x / 100) * canvasWidth;
 		const y = (position.y / 100) * canvasHeight;
-		const width = (size.width / 100) * canvasWidth;
-		const height = (size.height / 100) * canvasHeight;
+		const width = Math.ceil((size.width / 100) * canvasWidth);
+		const height = Math.ceil((size.height / 100) * canvasHeight);
 		const { effectType, intensity, feathering, solidColor } = blurData;
+
+		// For software renderers, use simplified blur (solid color overlay)
+		if (isSoftwareRenderer()) {
+			this.renderBlurMaskSimplified(ctx, x, y, width, height, effectType, solidColor);
+			return;
+		}
 
 		// 保存当前画布状态
 		ctx.save();
 
-		// 创建临时画布用于模糊处理
-		const tempCanvas = document.createElement("canvas");
-		tempCanvas.width = canvasWidth;
-		tempCanvas.height = canvasHeight;
-		const tempCtx = tempCanvas.getContext("2d")!;
+		// Use cached canvases instead of creating new ones each frame
+		if (
+			!this.blurTempCanvas ||
+			this.blurTempCanvas.width !== canvasWidth ||
+			this.blurTempCanvas.height !== canvasHeight
+		) {
+			this.blurTempCanvas = document.createElement("canvas");
+			this.blurTempCanvas.width = canvasWidth;
+			this.blurTempCanvas.height = canvasHeight;
+			this.blurTempCtx = this.blurTempCanvas.getContext("2d")!;
+		}
+		const tempCtx = this.blurTempCtx!;
+		tempCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 		tempCtx.drawImage(ctx.canvas, 0, 0);
 
-		// 创建模糊区域画布
-		const blurCanvas = document.createElement("canvas");
-		blurCanvas.width = Math.ceil(width);
-		blurCanvas.height = Math.ceil(height);
-		const blurCtx = blurCanvas.getContext("2d")!;
-
-		// 从临时画布复制模糊区域内容
-		blurCtx.drawImage(tempCanvas, -x, -y);
+		// Use cached blur region canvas
+		if (
+			!this.blurRegionCanvas ||
+			this.blurRegionCanvas.width !== width ||
+			this.blurRegionCanvas.height !== height
+		) {
+			this.blurRegionCanvas = document.createElement("canvas");
+			this.blurRegionCanvas.width = width;
+			this.blurRegionCanvas.height = height;
+			this.blurRegionCtx = this.blurRegionCanvas.getContext("2d")!;
+		}
+		const blurCtx = this.blurRegionCtx!;
+		blurCtx.clearRect(0, 0, width, height);
+		blurCtx.drawImage(this.blurTempCanvas, -x, -y);
 
 		// 根据类型应用模糊效果
 		switch (effectType) {
 			case "gaussian":
 				blurCtx.filter = `blur(${intensity}px)`;
-				blurCtx.drawImage(blurCanvas, 0, 0);
+				blurCtx.drawImage(this.blurRegionCanvas, 0, 0);
 				blurCtx.filter = "none";
 				break;
 
@@ -535,7 +602,7 @@ export class FrameRenderer {
 
 			case "heavy":
 				blurCtx.filter = `blur(${intensity * 1.5}px) saturate(0.3)`;
-				blurCtx.drawImage(blurCanvas, 0, 0);
+				blurCtx.drawImage(this.blurRegionCanvas, 0, 0);
 				blurCtx.filter = "none";
 				break;
 		}
@@ -544,11 +611,19 @@ export class FrameRenderer {
 		if (feathering > 0) {
 			const feather = Math.min(feathering, Math.min(width, height) / 2);
 
-			// 创建羽化遮罩画布
-			const maskCanvas = document.createElement("canvas");
-			maskCanvas.width = Math.ceil(width);
-			maskCanvas.height = Math.ceil(height);
-			const maskCtx = maskCanvas.getContext("2d")!;
+			// Use cached mask canvas
+			if (
+				!this.blurMaskCanvas ||
+				this.blurMaskCanvas.width !== width ||
+				this.blurMaskCanvas.height !== height
+			) {
+				this.blurMaskCanvas = document.createElement("canvas");
+				this.blurMaskCanvas.width = width;
+				this.blurMaskCanvas.height = height;
+				this.blurMaskCtx = this.blurMaskCanvas.getContext("2d")!;
+			}
+			const maskCtx = this.blurMaskCtx!;
+			maskCtx.clearRect(0, 0, width, height);
 
 			// 填充白色基础
 			maskCtx.fillStyle = "white";
@@ -587,13 +662,42 @@ export class FrameRenderer {
 
 			// 应用遮罩到模糊区域
 			blurCtx.globalCompositeOperation = "destination-in";
-			blurCtx.drawImage(maskCanvas, 0, 0);
+			blurCtx.drawImage(this.blurMaskCanvas, 0, 0);
 			blurCtx.globalCompositeOperation = "source-over";
 		}
 
 		// 将处理后的模糊区域绘制回主画布
-		ctx.drawImage(blurCanvas, x, y);
+		ctx.drawImage(this.blurRegionCanvas, x, y);
 
+		ctx.restore();
+	}
+
+	/**
+	 * Simplified blur mask rendering for software renderers (SwiftShader).
+	 * Uses solid color overlay instead of expensive filter operations.
+	 */
+	private renderBlurMaskSimplified(
+		ctx: CanvasRenderingContext2D,
+		x: number,
+		y: number,
+		width: number,
+		height: number,
+		effectType: string,
+		solidColor: string,
+	): void {
+		ctx.save();
+
+		// For software renderers, use semi-transparent overlay instead of blur
+		// This avoids expensive filter operations that cause GPU stalls
+		if (effectType === "solid" && solidColor) {
+			ctx.fillStyle = solidColor;
+		} else {
+			// Use a semi-transparent gray for gaussian/heavy blur effects
+			// This provides visual feedback without the performance cost
+			ctx.fillStyle = "rgba(128, 128, 128, 0.6)";
+		}
+
+		ctx.fillRect(x, y, width, height);
 		ctx.restore();
 	}
 
