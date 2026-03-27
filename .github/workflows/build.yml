@@ -1,5 +1,5 @@
 
-name: Build Electron App
+name: Build Electron Legacy App
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
         run: npx electron-builder install-app-deps
         
       - name: Build Windows app
-        run: npm run build:win
+        run: npm run build:legacy:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
@@ -63,9 +63,8 @@ jobs:
   #     - name: Install app dependencies
   #       run: npx electron-builder install-app-deps
 
-  #     - name: Build macOS app
-  #       run: npm run build:mac
-  #       env:
+      #     - name: Build macOS app
+      #       run: npm run build:legacy:mac  #       env:
   #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   #     - name: Upload macOS build
@@ -92,9 +91,8 @@ jobs:
   #     - name: Install app dependencies
   #       run: npx electron-builder install-app-deps
 
-  #     - name: Build Linux app
-  #       run: npm run build:linux
-  #       env:
+      #     - name: Build Linux app
+      #       run: npm run build:legacy:linux  #       env:
   #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   #     - name: Upload Linux build

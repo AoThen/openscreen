@@ -3,8 +3,6 @@ name: Build Tauri App
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "v*"
 
 jobs:
   build:
@@ -12,26 +10,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            platform: macos-arm64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            platform: macos-x64
+          # - os: macos-latest
+          #   target: aarch64-apple-darwin
+          #   platform: macos-arm64
+          # - os: macos-latest
+          #   target: x86_64-apple-darwin
+          #   platform: macos-x64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             platform: windows
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            platform: linux
+          # - os: ubuntu-22.04
+          #   target: x86_64-unknown-linux-gnu
+          #   platform: linux
 
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@main
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -41,10 +39,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          target: ${{ matrix.target }}
+      # - name: Rust cache
+      #   uses: swatinem/rust-cache@v2
+      #   with:
+      #     target: ${{ matrix.target }}
 
       - name: Install dependencies (Ubuntu only)
         if: matrix.os == 'ubuntu-22.04'
@@ -63,7 +61,7 @@ jobs:
 
       - name: Upload artifacts (macOS)
         if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tauri-${{ matrix.platform }}
           path: |
@@ -73,7 +71,7 @@ jobs:
 
       - name: Upload artifacts (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tauri-${{ matrix.platform }}
           path: |
@@ -83,7 +81,7 @@ jobs:
 
       - name: Upload artifacts (Linux)
         if: matrix.os == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tauri-${{ matrix.platform }}
           path: |
@@ -92,23 +90,23 @@ jobs:
           retention-days: 30
 
   # Optional: Create a release with all artifacts
-  create-release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # create-release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: startsWith(github.ref, 'refs/tags/')
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@main
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v7
+  #       with:
+  #         path: artifacts
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: artifacts/**/*
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Create Release
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         files: artifacts/**/*
+  #         generate_release_notes: true
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

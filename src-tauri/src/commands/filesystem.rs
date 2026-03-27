@@ -3,12 +3,26 @@
 use serde::Serialize;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
 /// 项目文件扩展名
 const PROJECT_FILE_EXTENSION: &str = "openscreen";
+
+/// 项目状态 - 跟踪当前项目路径
+pub struct ProjectState {
+    pub current_project_path: Mutex<Option<String>>,
+}
+
+impl Default for ProjectState {
+    fn default() -> Self {
+        Self {
+            current_project_path: Mutex::new(None),
+        }
+    }
+}
 
 /// 读取二进制文件
 #[tauri::command]
@@ -60,11 +74,18 @@ pub async fn save_project_file(
     suggested_name: Option<String>,
     existing_project_path: Option<String>,
 ) -> Result<SaveProjectFileResult, String> {
+    let state = app.state::<ProjectState>();
+    
     // 如果有现有项目路径，直接保存
     if let Some(path) = existing_project_path {
         let path_buf = PathBuf::from(&path);
         let content = serde_json::to_string_pretty(&project_data).map_err(|e| e.to_string())?;
         fs::write(&path_buf, content).map_err(|e| e.to_string())?;
+
+        // 更新当前项目路径
+        if let Ok(mut current_path) = state.current_project_path.lock() {
+            *current_path = Some(path.clone());
+        }
 
         return Ok(SaveProjectFileResult {
             success: true,
@@ -98,9 +119,16 @@ pub async fn save_project_file(
             let content = serde_json::to_string_pretty(&project_data).map_err(|e| e.to_string())?;
             fs::write(&path, content).map_err(|e| e.to_string())?;
 
+            let path_str = path.to_string_lossy().to_string();
+            
+            // 更新当前项目路径
+            if let Ok(mut current_path) = state.current_project_path.lock() {
+                *current_path = Some(path_str.clone());
+            }
+
             Ok(SaveProjectFileResult {
                 success: true,
-                path: Some(path.to_string_lossy().to_string()),
+                path: Some(path_str),
                 message: Some("Project saved successfully".to_string()),
                 canceled: None,
             })
@@ -129,6 +157,7 @@ pub struct SaveProjectFileResult {
 /// 加载项目文件
 #[tauri::command]
 pub async fn load_project_file(app: AppHandle) -> Result<LoadProjectFileResult, String> {
+    let state = app.state::<ProjectState>();
     let recordings_dir = get_recordings_dir(&app);
 
     let file_path = app
@@ -145,9 +174,16 @@ pub async fn load_project_file(app: AppHandle) -> Result<LoadProjectFileResult, 
             let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
             let project: serde_json::Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
+            let path_str = path.to_string_lossy().to_string();
+            
+            // 更新当前项目路径
+            if let Ok(mut current_path) = state.current_project_path.lock() {
+                *current_path = Some(path_str.clone());
+            }
+
             Ok(LoadProjectFileResult {
                 success: true,
-                path: Some(path.to_string_lossy().to_string()),
+                path: Some(path_str),
                 project: Some(project),
                 message: None,
                 canceled: None,
@@ -339,4 +375,71 @@ fn get_recordings_dir(app: &AppHandle) -> PathBuf {
     app.path().app_data_dir()
         .map(|p| p.join("recordings"))
         .unwrap_or_else(|_| PathBuf::from("./recordings"))
+}
+
+/// 加载当前项目文件
+/// 从上次保存的项目路径加载项目数据
+#[tauri::command]
+pub async fn load_current_project_file(app: AppHandle) -> Result<LoadProjectFileResult, String> {
+    let state = app.state::<ProjectState>();
+    
+    // 获取当前项目路径
+    let project_path = {
+        if let Ok(path) = state.current_project_path.lock() {
+            path.clone()
+        } else {
+            None
+        }
+    };
+
+    match project_path {
+        Some(path) => {
+            let path_buf = PathBuf::from(&path);
+            
+            if !path_buf.exists() {
+                return Ok(LoadProjectFileResult {
+                    success: false,
+                    path: None,
+                    project: None,
+                    message: Some("Project file not found".to_string()),
+                    canceled: None,
+                });
+            }
+
+            match fs::read_to_string(&path_buf) {
+                Ok(content) => {
+                    match serde_json::from_str(&content) {
+                        Ok(project) => Ok(LoadProjectFileResult {
+                            success: true,
+                            path: Some(path),
+                            project: Some(project),
+                            message: None,
+                            canceled: None,
+                        }),
+                        Err(e) => Ok(LoadProjectFileResult {
+                            success: false,
+                            path: None,
+                            project: None,
+                            message: Some(format!("Failed to parse project: {}", e)),
+                            canceled: None,
+                        }),
+                    }
+                }
+                Err(e) => Ok(LoadProjectFileResult {
+                    success: false,
+                    path: None,
+                    project: None,
+                    message: Some(format!("Failed to read project file: {}", e)),
+                    canceled: None,
+                }),
+            }
+        }
+        None => Ok(LoadProjectFileResult {
+            success: false,
+            path: None,
+            project: None,
+            message: Some("No active project".to_string()),
+            canceled: None,
+        }),
+    }
 }

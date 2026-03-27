@@ -4,8 +4,6 @@
 
 use cpal::traits::{DeviceTrait, HostTrait};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
-use tauri::Manager;
 
 /// 音频设备信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,15 +13,6 @@ pub struct AudioDevice {
 	pub is_default: bool,
 	pub channels: u16,
 	pub sample_rate: u32,
-}
-
-/// 音频设备列表状态
-pub struct AudioDeviceState(pub Mutex<Vec<AudioDevice>>);
-
-impl Default for AudioDeviceState {
-	fn default() -> Self {
-		Self(Mutex::new(Vec::new()))
-	}
 }
 
 /// 获取麦克风设备列表
@@ -143,20 +132,6 @@ pub async fn request_microphone_permission(_app: tauri::AppHandle) -> Result<boo
 	}
 }
 
-/// 开始音频电平监听
-#[tauri::command]
-pub async fn start_audio_level_monitor(_app: tauri::AppHandle, _device_id: Option<String>) -> Result<(), String> {
-	// 音频电平监听通过前端 Web Audio API 实现
-	// 此命令仅作为预留接口
-	Ok(())
-}
-
-/// 停止音频电平监听
-#[tauri::command]
-pub fn stop_audio_level_monitor() -> Result<(), String> {
-	Ok(())
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -180,13 +155,6 @@ mod tests {
 		assert!(parsed.get("is_default").unwrap().as_bool().unwrap());
 		assert_eq!(parsed.get("channels").unwrap().as_u64().unwrap(), 2);
 		assert_eq!(parsed.get("sample_rate").unwrap().as_u64().unwrap(), 48000);
-	}
-
-	#[test]
-	fn test_audio_device_state_default() {
-		let state = AudioDeviceState::default();
-		let devices = state.0.lock().unwrap();
-		assert!(devices.is_empty());
 	}
 
 	#[test]

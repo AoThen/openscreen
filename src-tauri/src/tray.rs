@@ -7,21 +7,6 @@ use tauri::{
     image::Image,
 };
 
-/// 托盘状态
-pub struct TrayState {
-    pub is_recording: bool,
-    pub source_name: String,
-}
-
-impl Default for TrayState {
-    fn default() -> Self {
-        Self {
-            is_recording: false,
-            source_name: String::new(),
-        }
-    }
-}
-
 /// 创建系统托盘
 pub fn create_tray(app: &AppHandle) -> Result<TrayIcon, String> {
     // 创建菜单项

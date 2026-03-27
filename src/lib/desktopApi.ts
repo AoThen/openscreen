@@ -363,11 +363,14 @@ async function createTauriApi(): Promise<DesktopApi> {
 		},
 
 		async loadCurrentProjectFile() {
-			// TODO: 实现此功能
-			return {
-				success: false,
-				error: "Not implemented",
-			};
+			return await invoke<{
+				success: boolean;
+				path?: string;
+				project?: unknown;
+				message?: string;
+				canceled?: boolean;
+				error?: string;
+			}>("load_current_project_file");
 		},
 
 		onMenuLoadProject(callback: () => void) {

@@ -10,7 +10,6 @@ pub const WINDOW_SOURCE_SELECTOR: &str = "source-selector";
 
 /// 窗口状态
 pub struct WindowState {
-    pub selected_source_name: String,
     pub editor_has_unsaved_changes: bool,
     pub is_force_closing: bool,
 }
@@ -18,7 +17,6 @@ pub struct WindowState {
 impl Default for WindowState {
     fn default() -> Self {
         Self {
-            selected_source_name: String::new(),
             editor_has_unsaved_changes: false,
             is_force_closing: false,
         }
@@ -253,4 +251,25 @@ pub fn get_platform() -> String {
     {
         "unknown".to_string()
     }
+}
+
+/// 保存完成确认，用于窗口关闭流程
+/// 当前端完成保存操作后调用此命令，通知后端可以关闭窗口
+#[tauri::command]
+pub fn save_before_close_done(app: AppHandle, should_close: bool) -> Result<(), String> {
+    let state = app.state::<GlobalWindowState>();
+    
+    if should_close {
+        // 设置强制关闭标志
+        if let Ok(mut window_state) = state.0.lock() {
+            window_state.is_force_closing = true;
+        }
+        
+        // 关闭编辑器窗口
+        if let Some(window) = app.get_webview_window(WINDOW_EDITOR) {
+            window.close().map_err(|e| e.to_string())?;
+        }
+    }
+    
+    Ok(())
 }

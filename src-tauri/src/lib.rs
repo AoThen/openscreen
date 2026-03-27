@@ -3,9 +3,10 @@
 
 mod commands;
 mod cursor;
+mod menu;
 mod tray;
 
-use commands::audio::AudioDeviceState;
+use commands::filesystem::ProjectState;
 use commands::recording::AppState;
 use commands::window::{GlobalWindowState, create_hud_overlay_window};
 use cursor::CursorTracker;
@@ -33,7 +34,7 @@ pub fn run() {
         .manage(AppState::default())
         .manage(CursorTrackerState::default())
         .manage(GlobalWindowState::default())
-        .manage(AudioDeviceState::default())
+        .manage(ProjectState::default())
         .invoke_handler(tauri::generate_handler![
             // 窗口命令
             commands::window::switch_to_editor,
@@ -44,10 +45,12 @@ pub fn run() {
             commands::window::close_source_selector,
             commands::window::set_has_unsaved_changes,
             commands::window::get_platform,
+            commands::window::save_before_close_done,
             // 文件系统命令
             commands::filesystem::read_binary_file,
             commands::filesystem::save_project_file,
             commands::filesystem::load_project_file,
+            commands::filesystem::load_current_project_file,
             commands::filesystem::open_video_file_picker,
             commands::filesystem::save_exported_video,
             commands::filesystem::reveal_in_folder,
@@ -91,6 +94,10 @@ pub fn run() {
                 )?;
             }
             
+            // 创建应用菜单
+            let app_menu = menu::create_app_menu(app.handle())?;
+            app.set_menu(app_menu)?;
+            
             // 创建系统托盘
             create_tray(app.handle())?;
             
@@ -98,6 +105,10 @@ pub fn run() {
             create_hud_overlay_window(app.handle())?;
             
             Ok(())
+        })
+        .on_menu_event(|app, event| {
+            let menu_id = event.id.as_ref();
+            let _ = menu::handle_menu_event(app, menu_id);
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
