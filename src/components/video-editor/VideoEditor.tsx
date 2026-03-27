@@ -8,6 +8,7 @@ import { useShortcuts } from "@/contexts/ShortcutsContext";
 import { INITIAL_EDITOR_STATE, useEditorHistory } from "@/hooks/useEditorHistory";
 import { type Locale, SUPPORTED_LOCALES } from "@/i18n/config";
 import { getLocaleName } from "@/i18n/loader";
+import { desktopApi } from "@/lib/desktopApi";
 import {
 	calculateOutputDimensions,
 	type ExportFormat,
@@ -21,7 +22,6 @@ import {
 	VideoExporter,
 } from "@/lib/exporter";
 import type { ProjectMedia } from "@/lib/recordingSession";
-import { desktopApi } from "@/lib/desktopApi";
 import { matchesShortcut } from "@/lib/shortcuts";
 import {
 	getAspectRatioValue,

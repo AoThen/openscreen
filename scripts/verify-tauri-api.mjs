@@ -131,7 +131,9 @@ function verifyCommandMapping() {
 		if (!TS_API_METHODS.includes(expectedTsMethod)) {
 			// 检查是否有事件监听器（以 on 开头的方法不需要对应的 Rust 命令）
 			if (!expectedTsMethod.startsWith("on")) {
-				errors.push(`Missing TypeScript method for Rust command: ${rustCmd} -> ${expectedTsMethod}`);
+				errors.push(
+					`Missing TypeScript method for Rust command: ${rustCmd} -> ${expectedTsMethod}`,
+				);
 			}
 		}
 	}

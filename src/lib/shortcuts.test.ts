@@ -1,14 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	bindingsEqual,
+	DEFAULT_SHORTCUTS,
 	findConflict,
 	formatBinding,
 	matchesShortcut,
 	mergeWithDefaults,
-	DEFAULT_SHORTCUTS,
 	SHORTCUT_ACTIONS,
-	type ShortcutsConfig,
 	type ShortcutBinding,
+	type ShortcutsConfig,
 } from "./shortcuts";
 
 describe("bindingsEqual", () => {
@@ -246,7 +246,9 @@ describe("mergeWithDefaults", () => {
 	});
 
 	it("ignores invalid action keys", () => {
-		const result = mergeWithDefaults({ invalid: { key: "x" } } as unknown as Partial<ShortcutsConfig>);
+		const result = mergeWithDefaults({
+			invalid: { key: "x" },
+		} as unknown as Partial<ShortcutsConfig>);
 		expect(result).toEqual(DEFAULT_SHORTCUTS);
 	});
 });

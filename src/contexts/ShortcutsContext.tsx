@@ -7,9 +7,9 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import { desktopApi } from "@/lib/desktopApi";
 import { DEFAULT_SHORTCUTS, mergeWithDefaults, type ShortcutsConfig } from "@/lib/shortcuts";
 import { isMac as getIsMac } from "@/utils/platformUtils";
-import { desktopApi } from "@/lib/desktopApi";
 
 interface ShortcutsContextValue {
 	shortcuts: ShortcutsConfig;

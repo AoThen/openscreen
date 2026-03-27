@@ -138,7 +138,9 @@ export interface DesktopApi {
 		fonts: string[];
 		error?: string;
 	}>;
-	revealInFolder: (filePath: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+	revealInFolder: (
+		filePath: string,
+	) => Promise<{ success: boolean; message?: string; error?: string }>;
 	getPlatform: () => Promise<string>;
 	getShortcuts: () => Promise<Record<string, unknown> | null>;
 	saveShortcuts: (shortcuts: Record<string, unknown>) => Promise<void>;
@@ -341,7 +343,11 @@ async function createTauriApi(): Promise<DesktopApi> {
 			return await invoke<{ success: boolean }>("clear_current_video_path");
 		},
 
-		async saveProjectFile(projectData: unknown, suggestedName?: string, existingProjectPath?: string) {
+		async saveProjectFile(
+			projectData: unknown,
+			suggestedName?: string,
+			existingProjectPath?: string,
+		) {
 			return await invoke<{
 				success: boolean;
 				path?: string;
@@ -434,7 +440,9 @@ async function createTauriApi(): Promise<DesktopApi> {
 		},
 
 		async getSystemFonts() {
-			return await invoke<{ success: boolean; fonts: string[]; error?: string }>("get_system_fonts");
+			return await invoke<{ success: boolean; fonts: string[]; error?: string }>(
+				"get_system_fonts",
+			);
 		},
 
 		async revealInFolder(filePath: string) {
@@ -476,15 +484,16 @@ async function createTauriApi(): Promise<DesktopApi> {
 
 		async getMicrophoneDevices() {
 			try {
-				const devices = await invoke<
-					Array<{
-						device_id: string;
-						name: string;
-						is_default: boolean;
-						channels: number;
-						sample_rate: number;
-					}>
-				>("get_microphone_devices");
+				const devices =
+					await invoke<
+						Array<{
+							device_id: string;
+							name: string;
+							is_default: boolean;
+							channels: number;
+							sample_rate: number;
+						}>
+					>("get_microphone_devices");
 				return {
 					success: true,
 					devices: devices.map((d) => ({

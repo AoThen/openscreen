@@ -135,7 +135,9 @@ interface Window {
 			fonts: string[];
 			error?: string;
 		}>;
-		revealInFolder: (filePath: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+		revealInFolder: (
+			filePath: string,
+		) => Promise<{ success: boolean; message?: string; error?: string }>;
 		getPlatform: () => Promise<string>;
 		getShortcuts: () => Promise<Record<string, unknown> | null>;
 		saveShortcuts: (shortcuts: Record<string, unknown>) => Promise<void>;

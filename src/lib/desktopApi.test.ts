@@ -3,12 +3,16 @@
  * 验证 Electron 和 Tauri API 接口一致性
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import type { DesktopApi, ProcessedDesktopSource, CursorTelemetryPoint } from "./desktopApi";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CursorTelemetryPoint, DesktopApi, ProcessedDesktopSource } from "./desktopApi";
 
 // Mock Tauri invoke
 const mockInvoke = vi.fn();
-const mockListen = vi.fn(() => Promise.resolve(() => {}));
+const mockListen = vi.fn(() =>
+	Promise.resolve(() => {
+		/* unlisten noop */
+	}),
+);
 
 vi.mock("@tauri-apps/api/core", () => ({
 	invoke: (cmd: string, args?: Record<string, unknown>) => mockInvoke(cmd, args),

@@ -24,6 +24,8 @@ test("exports a GIF from a loaded video", async () => {
 			// Use OSMesa for software rendering in headless environments
 			"--use-gl=angle",
 			"--use-angle=swiftshader",
+			// Enable SwiftShader for WebGL support in headless environments
+			"--enable-unsafe-swiftshader",
 		],
 		env: {
 			...process.env,
@@ -57,9 +59,9 @@ test("exports a GIF from a loaded video", async () => {
 			ipcMain.removeHandler("save-exported-video");
 			ipcMain.handle(
 				"save-exported-video",
-				(_event: Electron.IpcMainInvokeEvent, buffer: ArrayBuffer) => {
+				(_event: Electron.IpcMainInvokeEvent, videoData: ArrayBuffer, _fileName: string) => {
 					(globalThis as Record<string, unknown>)["__testExportData"] =
-						Buffer.from(buffer).toString("base64");
+						Buffer.from(videoData).toString("base64");
 					return { success: true, path: "pending" };
 				},
 			);
