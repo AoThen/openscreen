@@ -80,8 +80,10 @@ windows = { version = "0.58", features = [
     "Win32_Media_Audio",
     "Win32_System_Com",
 ] }
-# Windows 屏幕捕获 (使用 zed-scap fork 修复 windows-capture v1.5.0 兼容性问题)
+# Windows 屏幕捕获 (使用 zed-scap fork)
+# 注意: zed-scap 0.0.8-zed 需要 windows-capture < 1.5.0
 zed-scap = "0.0.8-zed"
+windows-capture = "1.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 font-kit = "0.13"
