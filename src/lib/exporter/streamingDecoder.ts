@@ -99,10 +99,17 @@ export class StreamingVideoDecoder {
 			}
 
 			const filename = (result.path || videoUrl).split(/[\\/]/).pop() || "video";
-			// 创建新的 ArrayBuffer 来避免 SharedArrayBuffer 兼容性问题
-			const arrayBuffer = new ArrayBuffer(result.data.length);
-			new Uint8Array(arrayBuffer).set(result.data);
-			const blob = new Blob([arrayBuffer]);
+			// Handle both ArrayBuffer (from Electron IPC) and Uint8Array
+			// Electron IPC returns ArrayBuffer, which has byteLength (not length)
+			let dataBuffer: ArrayBuffer;
+			if (result.data instanceof ArrayBuffer) {
+				dataBuffer = result.data;
+			} else {
+				// result.data is Uint8Array - create a new ArrayBuffer to avoid SharedArrayBuffer issues
+				dataBuffer = new ArrayBuffer(result.data.byteLength);
+				new Uint8Array(dataBuffer).set(result.data);
+			}
+			const blob = new Blob([dataBuffer]);
 			return {
 				blob,
 				file: new File([blob], filename, { type: blob.type || "application/octet-stream" }),

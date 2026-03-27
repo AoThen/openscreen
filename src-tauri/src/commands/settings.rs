@@ -59,7 +59,7 @@ pub async fn get_system_fonts() -> Result<GetSystemFontsResult, String> {
     {
         let collection = dwrote::FontCollection::system();
         let mut font_names: Vec<String> = Vec::new();
-        for family in collection.families() {
+        for family in collection.families_iter() {
             font_names.push(family.name().to_string());
         }
 
