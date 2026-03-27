@@ -10,19 +10,22 @@
 	},
 	"scripts": {
 		"dev": "vite",
-		"build": "tsc && vite build && electron-builder",
+		"dev:legacy": "vite",
+		"build": "npm run tauri:build",
+		"build:legacy": "tsc && vite build && electron-builder -c electron-builder.json5",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"i18n:check": "node scripts/i18n-check.mjs",
 		"preview": "vite preview",
-		"build:mac": "tsc && vite build && electron-builder --mac",
-		"build:win": "tsc && vite build && electron-builder --win",
-		"build:linux": "tsc && vite build && electron-builder --linux",
+		"build:legacy:mac": "tsc && vite build && electron-builder -c electron-builder.json5 --mac",
+		"build:legacy:win": "tsc && vite build && electron-builder -c electron-builder.json5 --win",
+		"build:legacy:linux": "tsc && vite build && electron-builder -c electron-builder.json5 --linux",
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"build-vite": "tsc && vite build",
 		"test:e2e": "playwright test",
+		"test:e2e:legacy": "ELECTRON_RUN_AS_NODE=1 playwright test",
 		"prepare": "husky",
 		"tauri": "tauri",
 		"tauri:dev": "tauri dev",
@@ -106,7 +109,7 @@
 		"vite-plugin-electron-renderer": "^0.14.5",
 		"vitest": "^4.0.16"
 	},
-	"main": "dist-electron/main.js",
+	"main": "dist-electron-legacy/main.js",
 	"lint-staged": {
 		"*.{ts,tsx,js,jsx,mts,cts,json}": "biome check --no-errors-on-unmatched"
 	}

@@ -6,7 +6,7 @@ import { _electron as electron, expect, test } from "@playwright/test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "../..");
-const MAIN_JS = path.join(ROOT, "dist-electron/main.js");
+const MAIN_JS = path.join(ROOT, "dist-electron-legacy/main.js");
 const TEST_VIDEO = path.join(__dirname, "../fixtures/sample.webm");
 
 test("exports a GIF from a loaded video", async () => {

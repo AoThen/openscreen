@@ -10,19 +10,25 @@ export default defineConfig({
 		electron({
 			main: {
 				// Shortcut of `build.lib.entry`.
-				entry: "electron/main.ts",
+				entry: "electron-legacy/main.ts",
 				vite: {
 					build: {
 						rollupOptions: {
 							external: ["font-list"],
 						},
+						outDir: "dist-electron-legacy",
 					},
 				},
 			},
 			preload: {
 				// Shortcut of `build.rollupOptions.input`.
 				// Preload scripts may contain Web assets, so use the `build.rollupOptions.input` instead `build.lib.entry`.
-				input: path.join(__dirname, "electron/preload.ts"),
+				input: path.join(__dirname, "electron-legacy/preload.ts"),
+				vite: {
+					build: {
+						outDir: "dist-electron-legacy",
+					},
+				},
 			},
 			// Ployfill the Electron and Node.js API for Renderer process.
 			// If you want use Node.js in Renderer process, the `nodeIntegration` needs to be enabled in the Main process.

@@ -9,7 +9,7 @@ declare namespace NodeJS {
 		 * ├─┬─┬ dist
 		 * │ │ └── index.html
 		 * │ │
-		 * │ ├─┬ dist-electron
+		 * │ ├─┬ dist-electron-legacy
 		 * │ │ ├── main.js
 		 * │ │ └── preload.js
 		 * │
