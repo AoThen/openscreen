@@ -12,7 +12,7 @@
   },
   "files": [
     "dist",
-    "dist-electron",
+    "dist-electron-legacy",
     "!*.png",
     "!preview*.png",
     "!*.md",
