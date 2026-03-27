@@ -492,8 +492,11 @@ export function registerIpcHandlers(
 				const assetPath = path.join(process.resourcesPath, "assets");
 				return pathToFileURL(`${assetPath}${path.sep}`).toString();
 			}
-			const assetPath = path.join(app.getAppPath(), "public", "assets");
-			return pathToFileURL(`${assetPath}${path.sep}`).toString();
+			// In non-packaged mode (E2E tests, dev builds), use the dist directory
+			// which contains the Vite build output including wasm files from public/
+			const __dirname = path.dirname(fileURLToPath(import.meta.url));
+			const distPath = path.join(__dirname, "..", "dist");
+			return pathToFileURL(`${distPath}${path.sep}`).toString();
 		} catch (err) {
 			console.error("Failed to resolve asset base path:", err);
 			return null;
