@@ -1837,6 +1837,12 @@ export default function VideoEditor() {
 									onAnnotationDelete={handleAnnotationDelete}
 									selectedAnnotationId={selectedAnnotationId}
 									onSelectAnnotation={handleSelectAnnotation}
+									highlightRegions={highlightRegions}
+									onHighlightAdded={handleHighlightAdded}
+									onHighlightSpanChange={handleHighlightSpanChange}
+									onHighlightDelete={handleHighlightDelete}
+									selectedHighlightId={selectedHighlightId}
+									onSelectHighlight={setSelectedHighlightId}
 									aspectRatio={aspectRatio}
 									onAspectRatioChange={(ar) =>
 										pushState({

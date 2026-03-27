@@ -65,7 +65,7 @@ export function HighlightOverlay({
 			)}
 			style={{
 				zIndex: zIndex + 1000,
-				pointerEvents: isSelected ? "auto" : "none",
+				pointerEvents: "auto",
 				border: isSelected ? "2px solid rgba(52, 178, 123, 0.8)" : "none",
 				backgroundColor: isSelected ? "rgba(52, 178, 123, 0.1)" : "transparent",
 				boxShadow: isSelected ? "0 0 0 1px rgba(52, 178, 123, 0.35)" : "none",
