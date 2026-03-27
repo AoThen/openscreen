@@ -61,7 +61,7 @@ objc = "0.2"
 font-kit = "0.13"
 core-graphics = "0.24"
 # macOS 屏幕捕获 (使用 zed-scap fork 修复兼容性问题)
-zed-scap = "0.0.8-zed"
+scap = { package = "zed-scap", version = "0.0.8-zed" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = [
@@ -82,7 +82,7 @@ windows = { version = "0.58", features = [
 ] }
 # Windows 屏幕捕获 (使用 zed-scap fork)
 # 注意: zed-scap 0.0.8-zed 需要 windows-capture < 1.5.0
-zed-scap = "0.0.8-zed"
+scap = { package = "zed-scap", version = "0.0.8-zed" }
 windows-capture = "1.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]

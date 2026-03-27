@@ -54,7 +54,36 @@ pub async fn save_shortcuts(
 /// 获取系统字体列表
 #[tauri::command]
 pub async fn get_system_fonts() -> Result<GetSystemFontsResult, String> {
-    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+    // Windows 使用 dwrote
+    #[cfg(target_os = "windows")]
+    {
+        match dwrote::FontCollection::system() {
+            Ok(collection) => {
+                let mut font_names: Vec<String> = Vec::new();
+                for family in collection.families() {
+                    font_names.push(family.name().to_string());
+                }
+
+                // 去重并排序
+                font_names.sort();
+                font_names.dedup();
+
+                Ok(GetSystemFontsResult {
+                    success: true,
+                    fonts: font_names,
+                    error: None,
+                })
+            }
+            Err(e) => Ok(GetSystemFontsResult {
+                success: false,
+                fonts: vec![],
+                error: Some(e.to_string()),
+            }),
+        }
+    }
+
+    // macOS 和 Linux 使用 font_kit
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
         match font_kit::source::SystemSource::new().all_fonts() {
             Ok(fonts) => {
