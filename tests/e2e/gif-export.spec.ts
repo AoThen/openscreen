@@ -118,15 +118,20 @@ test("exports a GIF from a loaded video", async () => {
 		});
 		console.log(`[TEST] Editor window URL: ${editorWindow.url()}`);
 
-		// Setup console logging for editor window
+		// Setup console logging for editor window with detailed error tracking
 		editorWindow.on("console", (msg) => {
 			const text = msg.text();
 			console.log(`[Editor console] ${msg.type()}: ${text}`);
-			// Track export errors from console
+			// Track export errors from console - capture more patterns
 			if (
 				text.includes("export failed") ||
 				text.includes("Export failed") ||
-				text.includes("error")
+				text.includes("error") ||
+				text.includes("Error") ||
+				text.includes("EBML") ||
+				text.includes("Cannot open") ||
+				text.includes("GPU stall") ||
+				text.includes("WebGL")
 			) {
 				exportError = text;
 			}
@@ -150,19 +155,42 @@ test("exports a GIF from a loaded video", async () => {
 		// Wait for video to be fully ready
 		await editorWindow.waitForTimeout(2000);
 
-		// Check WebGL support
+		// Check WebGL support with detailed diagnostics
 		const webglInfo = await editorWindow.evaluate(() => {
 			const canvas = document.createElement("canvas");
 			const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
-			if (!gl) return { supported: false };
+			if (!gl) return { supported: false, reason: "Could not get WebGL context" };
+
 			const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+
+			// Test basic WebGL operations
+			let webglWorking = true;
+			let webglError: string | null = null;
+			try {
+				// Try a simple readPixels to test if WebGL is functional
+				const pixels = new Uint8Array(4);
+				gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+				const err = gl.getError();
+				if (err !== gl.NO_ERROR) {
+					webglWorking = false;
+					webglError = `WebGL error after readPixels: ${err}`;
+				}
+			} catch (e) {
+				webglWorking = false;
+				webglError = `WebGL readPixels threw: ${e}`;
+			}
+
 			return {
 				supported: true,
 				renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "unknown",
 				vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : "unknown",
+				webglWorking,
+				webglError,
+				maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+				maxRenderbufferSize: gl.getParameter(gl.MAX_RENDERBUFFER_SIZE),
 			};
 		});
-		console.log(`[TEST] WebGL info: ${JSON.stringify(webglInfo)}`);
+		console.log(`[TEST] WebGL info: ${JSON.stringify(webglInfo, null, 2)}`);
 
 		// Check if video element exists and is ready
 		const videoState = await editorWindow.evaluate(() => {
@@ -175,6 +203,7 @@ test("exports a GIF from a loaded video", async () => {
 				videoWidth: video.videoWidth,
 				videoHeight: video.videoHeight,
 				error: video.error?.message,
+				src: video.src || video.currentSrc,
 			};
 		});
 		console.log(`[TEST] Video state: ${JSON.stringify(videoState)}`);
@@ -182,6 +211,17 @@ test("exports a GIF from a loaded video", async () => {
 		if (!videoState.exists || videoState.readyState < 2) {
 			throw new Error(`Video not ready: ${JSON.stringify(videoState)}`);
 		}
+
+		// Verify the video path is correctly set
+		const videoPathCheck = await editorWindow.evaluate(async () => {
+			try {
+				const result = await window.electronAPI.getCurrentVideoPath();
+				return result;
+			} catch (e) {
+				return { error: String(e) };
+			}
+		});
+		console.log(`[TEST] Current video path: ${JSON.stringify(videoPathCheck)}`);
 
 		console.log("[TEST] Step 7: Selecting GIF format...");
 		// ── 5. Select GIF as the export format.
@@ -200,6 +240,7 @@ test("exports a GIF from a loaded video", async () => {
 		// ── 6. Wait for the success toast or error message.
 		const startTime = Date.now();
 		const timeout = 90_000;
+		let lastProgressLog = 0;
 
 		while (Date.now() - startTime < timeout) {
 			// Check for success toast
@@ -236,14 +277,28 @@ test("exports a GIF from a loaded video", async () => {
 				break;
 			}
 
-			// Log progress every 10 seconds
-			if (
-				Math.floor((Date.now() - startTime) / 10000) !==
-				Math.floor((Date.now() - startTime - 100) / 10000)
-			) {
-				console.log(
-					`[TEST] Still waiting... (${Math.floor((Date.now() - startTime) / 1000)}s) progress=${exportProgress}`,
-				);
+			// Log progress every 5 seconds with more detail
+			const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+			if (elapsedSec > 0 && elapsedSec % 5 === 0 && elapsedSec !== lastProgressLog) {
+				lastProgressLog = elapsedSec;
+				console.log(`[TEST] Still waiting... (${elapsedSec}s) progress=${exportProgress}`);
+
+				// Check if there are any errors in the page
+				const pageErrors = await editorWindow.evaluate(() => {
+					const errors: string[] = [];
+					// Check for WebGL context loss
+					const canvas = document.querySelector("canvas");
+					if (canvas) {
+						const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+						if (!gl || gl.isContextLost()) {
+							errors.push("WebGL context lost");
+						}
+					}
+					return errors;
+				});
+				if (pageErrors.length > 0) {
+					console.error(`[TEST] Page errors detected: ${pageErrors.join(", ")}`);
+				}
 			}
 
 			await editorWindow.waitForTimeout(500);
