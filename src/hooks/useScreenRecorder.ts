@@ -43,6 +43,7 @@ const WEBCAM_TARGET_FRAME_RATE = 30;
 type UseScreenRecorderReturn = {
 	recording: boolean;
 	paused: boolean;
+	elapsedTime: number;
 	toggleRecording: () => void;
 	pauseRecording: () => void;
 	resumeRecording: () => void;
@@ -60,6 +61,12 @@ type UseScreenRecorderReturn = {
 type RecorderHandle = {
 	recorder: MediaRecorder;
 	recordedBlobPromise: Promise<Blob>;
+};
+
+type RecordingSegment = {
+	screenBlob: Blob;
+	webcamBlob: Blob | null;
+	duration: number;
 };
 
 function createRecorderHandle(stream: MediaStream, options: MediaRecorderOptions): RecorderHandle {
@@ -88,6 +95,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	const t = useScopedT("editor");
 	const [recording, setRecording] = useState(false);
 	const [paused, setPaused] = useState(false);
+	const [elapsedTime, setElapsedTime] = useState(0);
 	const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
 	const [microphoneDeviceId, setMicrophoneDeviceId] = useState<string | undefined>(undefined);
 	const [systemAudioEnabled, setSystemAudioEnabled] = useState(false);
@@ -100,13 +108,15 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	const webcamStream = useRef<MediaStream | null>(null);
 	const mixingContext = useRef<AudioContext | null>(null);
 	const startTime = useRef<number>(0);
-	const pausedTime = useRef<number>(0); // 累计暂停时长
-	const pauseStartTime = useRef<number>(0); // 本次暂停开始时间
+	const segmentStartTime = useRef<number>(0);
+	const totalRecordedTime = useRef<number>(0);
+	const recordingSegments = useRef<RecordingSegment[]>([]);
 	const recordingId = useRef<number>(0);
 	const finalizingRecordingId = useRef<number | null>(null);
 	const allowAutoFinalize = useRef(false);
 	const discardRecordingId = useRef<number | null>(null);
 	const restarting = useRef(false);
+	const recorderOptions = useRef<MediaRecorderOptions | null>(null);
 
 	const selectMimeType = () => {
 		const preferred = [
@@ -135,6 +145,31 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 		return Math.round(BITRATE_BASE * highFrameRateBoost);
 	};
+
+	// 更新实际录制时间
+	useEffect(() => {
+		if (!recording) {
+			setElapsedTime(0);
+			return;
+		}
+
+		const updateElapsed = () => {
+			if (paused) {
+				// 暂停中：显示已录制的总时间
+				setElapsedTime(Math.max(0, Math.floor(totalRecordedTime.current / 1000)));
+			} else {
+				// 录制中：已录制时间 + 当前片段时间
+				const currentSegmentTime = Date.now() - segmentStartTime.current;
+				const total = totalRecordedTime.current + currentSegmentTime;
+				setElapsedTime(Math.max(0, Math.floor(total / 1000)));
+			}
+		};
+
+		updateElapsed();
+		const timer = setInterval(updateElapsed, 1000);
+
+		return () => clearInterval(timer);
+	}, [recording, paused]);
 
 	const teardownMedia = useCallback(() => {
 		if (stream.current) {
@@ -185,24 +220,34 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		[t],
 	);
 
+	// 合并多个 WebM 片段
+	const mergeSegments = useCallback(async (segments: RecordingSegment[]): Promise<Blob> => {
+		if (segments.length === 0) {
+			throw new Error("No segments to merge");
+		}
+		if (segments.length === 1) {
+			return segments[0].screenBlob;
+		}
+
+		// WebM 文件可以直接拼接（每个片段都是完整的 WebM 文件）
+		// 但我们需要重新封装以确保时间戳正确
+		// 这里我们使用简单拼接，然后让 fixWebmDuration 修复时长
+		const blobs = segments.map((s) => s.screenBlob);
+		const totalDuration = segments.reduce((sum, s) => sum + s.duration, 0);
+
+		// 使用 Blob 序列化方式合并
+		const combinedBlob = new Blob(blobs, { type: blobs[0].type || "video/webm" });
+
+		// 修复合并后的时长
+		return await fixWebmDuration(combinedBlob, totalDuration);
+	}, []);
+
 	const finalizeRecording = useCallback(
-		async (
-			activeScreenRecorder: RecorderHandle,
-			activeWebcamRecorder: RecorderHandle | null,
-			duration: number,
-			activeRecordingId: number,
-		) => {
+		async (segments: RecordingSegment[], activeRecordingId: number) => {
 			if (finalizingRecordingId.current === activeRecordingId) {
 				return;
 			}
 			finalizingRecordingId.current = activeRecordingId;
-
-			if (screenRecorder.current === activeScreenRecorder) {
-				screenRecorder.current = null;
-			}
-			if (activeWebcamRecorder && webcamRecorder.current === activeWebcamRecorder) {
-				webcamRecorder.current = null;
-			}
 
 			teardownMedia();
 			setRecording(false);
@@ -211,33 +256,39 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 			void (async () => {
 				try {
-					const screenBlob = await activeScreenRecorder.recordedBlobPromise;
 					if (discardRecordingId.current === activeRecordingId) {
 						return;
 					}
-					if (screenBlob.size === 0) {
+
+					if (segments.length === 0 || segments.every((s) => s.screenBlob.size === 0)) {
 						return;
 					}
 
-					const fixedScreenBlob = await fixWebmDuration(screenBlob, duration);
-					let fixedWebcamBlob: Blob | null = null;
-					if (activeWebcamRecorder) {
-						const webcamBlob = await activeWebcamRecorder.recordedBlobPromise.catch(() => null);
-						if (webcamBlob && webcamBlob.size > 0) {
-							fixedWebcamBlob = await fixWebmDuration(webcamBlob, duration);
-						}
+					// 合并所有片段
+					const mergedScreenBlob = await mergeSegments(segments);
+
+					// 合并 webcam 片段
+					let mergedWebcamBlob: Blob | null = null;
+					const webcamSegments = segments.filter((s) => s.webcamBlob && s.webcamBlob.size > 0);
+					if (webcamSegments.length > 0) {
+						const webcamBlobs = webcamSegments.map((s) => s.webcamBlob!);
+						const totalDuration = webcamSegments.reduce((sum, s) => sum + s.duration, 0);
+						const combinedWebcamBlob = new Blob(webcamBlobs, {
+							type: webcamBlobs[0].type || "video/webm",
+						});
+						mergedWebcamBlob = await fixWebmDuration(combinedWebcamBlob, totalDuration);
 					}
 
 					const screenFileName = `${RECORDING_FILE_PREFIX}${activeRecordingId}${VIDEO_FILE_EXTENSION}`;
 					const webcamFileName = `${RECORDING_FILE_PREFIX}${activeRecordingId}${WEBCAM_FILE_SUFFIX}${VIDEO_FILE_EXTENSION}`;
 					const result = await desktopApi.storeRecordedSession({
 						screen: {
-							videoData: await fixedScreenBlob.arrayBuffer(),
+							videoData: await mergedScreenBlob.arrayBuffer(),
 							fileName: screenFileName,
 						},
-						webcam: fixedWebcamBlob
+						webcam: mergedWebcamBlob
 							? {
-									videoData: await fixedWebcamBlob.arrayBuffer(),
+									videoData: await mergedWebcamBlob.arrayBuffer(),
 									fileName: webcamFileName,
 								}
 							: undefined,
@@ -268,7 +319,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 				}
 			})();
 		},
-		[teardownMedia],
+		[teardownMedia, mergeSegments],
 	);
 
 	const stopRecording = useRef(() => {
@@ -278,25 +329,11 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		}
 
 		const activeWebcamRecorder = webcamRecorder.current;
-		// 计算实际录制时长：总时间 - 累计暂停时间 - 如果当前暂停中，减去当前暂停时间
-		let totalPausedTime = pausedTime.current;
-		if (paused && pauseStartTime.current > 0) {
-			totalPausedTime += Date.now() - pauseStartTime.current;
-		}
-		const duration = Date.now() - startTime.current - totalPausedTime;
+		const currentDuration = Date.now() - segmentStartTime.current;
 		const activeRecordingId = recordingId.current;
 
-		finalizeRecording(
-			activeScreenRecorder,
-			activeWebcamRecorder ?? null,
-			duration,
-			activeRecordingId,
-		);
-
-		if (
-			activeScreenRecorder.recorder.state === "recording" ||
-			activeScreenRecorder.recorder.state === "paused"
-		) {
+		// 停止当前录制器
+		if (activeScreenRecorder.recorder.state === "recording") {
 			try {
 				activeScreenRecorder.recorder.stop();
 			} catch {
@@ -304,10 +341,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			}
 		}
 		if (activeWebcamRecorder) {
-			if (
-				activeWebcamRecorder.recorder.state === "recording" ||
-				activeWebcamRecorder.recorder.state === "paused"
-			) {
+			if (activeWebcamRecorder.recorder.state === "recording") {
 				try {
 					activeWebcamRecorder.recorder.stop();
 				} catch {
@@ -315,6 +349,30 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 				}
 			}
 		}
+
+		// 保存当前片段并合并
+		void (async () => {
+			try {
+				const screenBlob = await activeScreenRecorder.recordedBlobPromise;
+				let webcamBlob: Blob | null = null;
+				if (activeWebcamRecorder) {
+					webcamBlob = await activeWebcamRecorder.recordedBlobPromise.catch(() => null);
+				}
+
+				if (screenBlob.size > 0) {
+					recordingSegments.current.push({
+						screenBlob,
+						webcamBlob,
+						duration: currentDuration,
+					});
+				}
+
+				// 合并并保存所有片段
+				await finalizeRecording([...recordingSegments.current], activeRecordingId);
+			} catch (error) {
+				console.error("Error finalizing recording:", error);
+			}
+		})();
 	});
 
 	useEffect(() => {
@@ -349,6 +407,31 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			teardownMedia();
 		};
 	}, [teardownMedia]);
+
+	const createNewRecorder = useCallback(async () => {
+		if (!stream.current || !recorderOptions.current) return;
+
+		screenRecorder.current = createRecorderHandle(stream.current, recorderOptions.current);
+		screenRecorder.current.recorder.addEventListener(
+			"error",
+			() => {
+				setRecording(false);
+			},
+			{ once: true },
+		);
+
+		if (webcamStream.current) {
+			webcamRecorder.current = createRecorderHandle(webcamStream.current, {
+				...recorderOptions.current,
+				videoBitsPerSecond: Math.min(
+					recorderOptions.current.videoBitsPerSecond || BITRATE_BASE,
+					BITRATE_BASE,
+				),
+			});
+		}
+
+		segmentStartTime.current = Date.now();
+	}, []);
 
 	const startRecording = async () => {
 		try {
@@ -502,57 +585,27 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			);
 
 			const hasAudio = stream.current.getAudioTracks().length > 0;
-			screenRecorder.current = createRecorderHandle(stream.current, {
+			recorderOptions.current = {
 				mimeType,
 				videoBitsPerSecond,
 				...(hasAudio
 					? { audioBitsPerSecond: systemAudioTrack ? AUDIO_BITRATE_SYSTEM : AUDIO_BITRATE_VOICE }
 					: {}),
-			});
-			screenRecorder.current.recorder.addEventListener(
-				"error",
-				() => {
-					setRecording(false);
-				},
-				{ once: true },
-			);
+			};
 
-			if (webcamStream.current) {
-				webcamRecorder.current = createRecorderHandle(webcamStream.current, {
-					mimeType,
-					videoBitsPerSecond: Math.min(videoBitsPerSecond, BITRATE_BASE),
-				});
-			}
-
+			// 初始化录制状态
 			recordingId.current = Date.now();
 			startTime.current = recordingId.current;
-			pausedTime.current = 0;
-			pauseStartTime.current = 0;
+			segmentStartTime.current = recordingId.current;
+			totalRecordedTime.current = 0;
+			recordingSegments.current = [];
 			allowAutoFinalize.current = true;
+
+			await createNewRecorder();
+
 			setRecording(true);
 			setPaused(false);
 			await desktopApi.setRecordingState(true);
-
-			const activeScreenRecorder = screenRecorder.current;
-			const activeWebcamRecorder = webcamRecorder.current;
-			const activeRecordingId = recordingId.current;
-			if (activeScreenRecorder) {
-				activeScreenRecorder.recorder.addEventListener(
-					"stop",
-					() => {
-						if (!allowAutoFinalize.current) {
-							return;
-						}
-						finalizeRecording(
-							activeScreenRecorder,
-							activeWebcamRecorder ?? null,
-							Math.max(0, Date.now() - startTime.current),
-							activeRecordingId,
-						);
-					},
-					{ once: true },
-				);
-			}
 		} catch (error) {
 			console.error("Failed to start recording:", error);
 			const errorMsg = error instanceof Error ? error.message : "Failed to start recording";
@@ -572,43 +625,59 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		recording ? stopRecording.current() : startRecording();
 	};
 
-	const pauseRecording = () => {
+	const pauseRecording = useCallback(async () => {
 		if (!recording || paused) return;
 
 		const activeScreenRecorder = screenRecorder.current;
 		const activeWebcamRecorder = webcamRecorder.current;
 
-		if (activeScreenRecorder?.recorder.state === "recording") {
-			activeScreenRecorder.recorder.pause();
-		}
+		if (!activeScreenRecorder || activeScreenRecorder.recorder.state !== "recording") return;
+
+		// 停止当前录制器
+		const currentDuration = Date.now() - segmentStartTime.current;
+		activeScreenRecorder.recorder.stop();
+
 		if (activeWebcamRecorder?.recorder.state === "recording") {
-			activeWebcamRecorder.recorder.pause();
+			activeWebcamRecorder.recorder.stop();
 		}
 
-		pauseStartTime.current = Date.now();
-		setPaused(true);
-	};
+		// 等待并保存当前片段
+		try {
+			const screenBlob = await activeScreenRecorder.recordedBlobPromise;
+			let webcamBlob: Blob | null = null;
+			if (activeWebcamRecorder) {
+				webcamBlob = await activeWebcamRecorder.recordedBlobPromise.catch(() => null);
+			}
 
-	const resumeRecording = () => {
+			if (screenBlob.size > 0) {
+				recordingSegments.current.push({
+					screenBlob,
+					webcamBlob,
+					duration: currentDuration,
+				});
+			}
+
+			// 更新总录制时间
+			totalRecordedTime.current += currentDuration;
+		} catch (error) {
+			console.error("Error saving segment during pause:", error);
+		}
+
+		// 清空当前录制器引用
+		screenRecorder.current = null;
+		webcamRecorder.current = null;
+
+		setPaused(true);
+	}, [recording, paused]);
+
+	const resumeRecording = useCallback(async () => {
 		if (!recording || !paused) return;
 
-		const activeScreenRecorder = screenRecorder.current;
-		const activeWebcamRecorder = webcamRecorder.current;
+		// 创建新的录制器
+		await createNewRecorder();
 
-		if (activeScreenRecorder?.recorder.state === "paused") {
-			activeScreenRecorder.recorder.resume();
-		}
-		if (activeWebcamRecorder?.recorder.state === "paused") {
-			activeWebcamRecorder.recorder.resume();
-		}
-
-		// 累加暂停时长
-		if (pauseStartTime.current > 0) {
-			pausedTime.current += Date.now() - pauseStartTime.current;
-			pauseStartTime.current = 0;
-		}
 		setPaused(false);
-	};
+	}, [recording, paused, createNewRecorder]);
 
 	const restartRecording = async () => {
 		if (restarting.current) return;
@@ -621,7 +690,6 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		)
 			return;
 
-		const activeWebcamRecorder = webcamRecorder.current;
 		const activeRecordingId = recordingId.current;
 
 		restarting.current = true;
@@ -634,12 +702,12 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		];
 
 		if (
-			activeWebcamRecorder?.recorder.state === "recording" ||
-			activeWebcamRecorder?.recorder.state === "paused"
+			webcamRecorder.current?.recorder.state === "recording" ||
+			webcamRecorder.current?.recorder.state === "paused"
 		) {
 			stopPromises.push(
 				new Promise<void>((resolve) => {
-					activeWebcamRecorder.recorder.addEventListener("stop", () => resolve(), {
+					webcamRecorder.current!.recorder.addEventListener("stop", () => resolve(), {
 						once: true,
 					});
 				}),
@@ -659,6 +727,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	return {
 		recording,
 		paused,
+		elapsedTime,
 		toggleRecording,
 		pauseRecording,
 		resumeRecording,

@@ -82,6 +82,7 @@ export function LaunchWindow() {
 	const {
 		recording,
 		paused,
+		elapsedTime,
 		toggleRecording,
 		pauseRecording,
 		resumeRecording,
@@ -95,8 +96,6 @@ export function LaunchWindow() {
 		webcamEnabled,
 		setWebcamEnabled,
 	} = useScreenRecorder();
-	const [recordingStart, setRecordingStart] = useState<number | null>(null);
-	const [elapsed, setElapsed] = useState(0);
 
 	const showMicControls = microphoneEnabled && !recording;
 	const { devices, selectedDeviceId, setSelectedDeviceId } =
@@ -111,25 +110,6 @@ export function LaunchWindow() {
 			setMicrophoneDeviceId(selectedDeviceId);
 		}
 	}, [selectedDeviceId, setMicrophoneDeviceId]);
-
-	useEffect(() => {
-		let timer: NodeJS.Timeout | null = null;
-		if (recording && !paused) {
-			if (!recordingStart) setRecordingStart(Date.now());
-			timer = setInterval(() => {
-				if (recordingStart) {
-					setElapsed(Math.floor((Date.now() - recordingStart) / 1000));
-				}
-			}, 1000);
-		} else if (!recording) {
-			setRecordingStart(null);
-			setElapsed(0);
-			if (timer) clearInterval(timer);
-		}
-		return () => {
-			if (timer) clearInterval(timer);
-		};
-	}, [recording, paused, recordingStart]);
 
 	useEffect(() => {
 		if (!import.meta.env.DEV) {
@@ -325,7 +305,7 @@ export function LaunchWindow() {
 								<span
 									className={`${paused ? "text-yellow-400" : "text-red-400"} text-xs font-semibold tabular-nums`}
 								>
-									{formatTimePadded(elapsed)}
+									{formatTimePadded(elapsedTime)}
 								</span>
 							</>
 						) : (
