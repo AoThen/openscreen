@@ -57,29 +57,21 @@ pub async fn get_system_fonts() -> Result<GetSystemFontsResult, String> {
     // Windows 使用 dwrote
     #[cfg(target_os = "windows")]
     {
-        match dwrote::FontCollection::system() {
-            Ok(collection) => {
-                let mut font_names: Vec<String> = Vec::new();
-                for family in collection.families() {
-                    font_names.push(family.name().to_string());
-                }
-
-                // 去重并排序
-                font_names.sort();
-                font_names.dedup();
-
-                Ok(GetSystemFontsResult {
-                    success: true,
-                    fonts: font_names,
-                    error: None,
-                })
-            }
-            Err(e) => Ok(GetSystemFontsResult {
-                success: false,
-                fonts: vec![],
-                error: Some(e.to_string()),
-            }),
+        let collection = dwrote::FontCollection::system();
+        let mut font_names: Vec<String> = Vec::new();
+        for family in collection.families() {
+            font_names.push(family.name().to_string());
         }
+
+        // 去重并排序
+        font_names.sort();
+        font_names.dedup();
+
+        Ok(GetSystemFontsResult {
+            success: true,
+            fonts: font_names,
+            error: None,
+        })
     }
 
     // macOS 和 Linux 使用 font_kit

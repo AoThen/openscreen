@@ -158,7 +158,7 @@ async fn get_sources_scap(opts: GetSourcesOptions) -> Result<GetSourcesResult, S
         .unwrap_or((DEFAULT_THUMBNAIL_WIDTH, DEFAULT_THUMBNAIL_HEIGHT));
 
     // 获取 scap 目标列表
-    let targets = scap::get_all_targets();
+    let targets = scap::get_all_targets().map_err(|e| e.to_string())?;
 
     // 获取 xcap 的显示器和窗口列表（用于生成缩略图）
     let monitors = xcap::Monitor::all().ok().unwrap_or_default();
@@ -167,128 +167,121 @@ async fn get_sources_scap(opts: GetSourcesOptions) -> Result<GetSourcesResult, S
     let mut sources = Vec::new();
 
     for target in &targets {
-        let source_type = match target.kind {
-            scap::target::TargetKind::Display => "screen",
-            scap::target::TargetKind::Window => "window",
-        };
+        match target {
+            scap::Target::Display(display) => {
+                if !want_screens {
+                    continue;
+                }
 
-        // 过滤不需要的类型
-        if !want_screens && source_type == "screen" {
-            continue;
-        }
-        if !want_windows && source_type == "window" {
-            continue;
-        }
+                // 过滤自身窗口（通过标题匹配）
+                if EXCLUDED_WINDOW_TITLES
+                    .iter()
+                    .any(|&excluded| display.title.contains(excluded))
+                {
+                    continue;
+                }
 
-        // 过滤自身窗口（通过标题匹配）
-        if let Some(ref title) = target.title {
-            if EXCLUDED_WINDOW_TITLES
-                .iter()
-                .any(|&excluded| title.contains(excluded))
-            {
-                continue;
+                // 生成源 ID
+                let id = format!("screen:{}", display.id);
+
+                // 获取名称
+                let name = if display.title.is_empty() {
+                    "Screen".to_string()
+                } else {
+                    display.title.clone()
+                };
+
+                // 生成缩略图
+                let thumbnail = generate_display_thumbnail(&monitors, &display.title, thumb_w, thumb_h);
+
+                sources.push(DesktopSource {
+                    id,
+                    name,
+                    display_id: None,
+                    thumbnail,
+                    app_icon: None,
+                });
+            }
+            scap::Target::Window(window) => {
+                if !want_windows {
+                    continue;
+                }
+
+                // 过滤自身窗口（通过标题匹配）
+                if EXCLUDED_WINDOW_TITLES
+                    .iter()
+                    .any(|&excluded| window.title.contains(excluded))
+                {
+                    continue;
+                }
+
+                // 生成源 ID
+                let id = format!("window:{}", window.id);
+
+                // 获取名称
+                let name = if window.title.is_empty() {
+                    "Window".to_string()
+                } else {
+                    window.title.clone()
+                };
+
+                // 生成缩略图
+                let thumbnail = generate_window_thumbnail(&windows, &window.title, thumb_w, thumb_h);
+
+                sources.push(DesktopSource {
+                    id,
+                    name,
+                    display_id: None,
+                    thumbnail,
+                    app_icon: None,
+                });
             }
         }
-
-        // 生成源 ID
-        let id = generate_source_id(target);
-
-        // 获取名称
-        let name = target
-            .title
-            .clone()
-            .unwrap_or_else(|| "Unknown".to_string());
-
-        // 生成缩略图
-        let thumbnail = generate_thumbnail(&target, &monitors, &windows, thumb_w, thumb_h);
-
-        sources.push(DesktopSource {
-            id,
-            name,
-            display_id: None,
-            thumbnail,
-            app_icon: None,
-        });
     }
 
     Ok(GetSourcesResult { sources })
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-fn generate_source_id(target: &scap::target::Target) -> String {
-    match target.kind {
-        scap::target::TargetKind::Display => {
-            // 屏幕源 ID
-            format!("screen:{}", target.id)
-        }
-        scap::target::TargetKind::Window => {
-            // 窗口源 ID
-            format!(
-                "window:{}:{}",
-                target.process_id.unwrap_or(0),
-                target.id
-            )
-        }
-    }
-}
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-fn generate_thumbnail(
-    target: &scap::target::Target,
+fn generate_display_thumbnail(
     monitors: &[xcap::Monitor],
-    windows: &[xcap::Window],
+    display_title: &str,
     width: u32,
     height: u32,
 ) -> Option<String> {
-    match target.kind {
-        scap::target::TargetKind::Display => {
-            // 对于显示器，尝试匹配 xcap Monitor
-            let monitor = find_monitor_by_target(monitors, target)?;
+    // 尝试通过名称匹配显示器
+    for monitor in monitors {
+        let name = monitor.name();
+        if name.contains(display_title) || display_title.contains(name) {
             let image = monitor.capture_image().ok()?;
-            encode_thumbnail_xcap(&image, width, height)
+            return encode_thumbnail_xcap(&image, width, height);
         }
-        scap::target::TargetKind::Window => {
-            // 对于窗口，尝试匹配 xcap Window
-            let window = find_window_by_target(windows, target)?;
+    }
 
-            // 跳过最小化的窗口
-            if window.is_minimized() {
-                return None;
-            }
+    // 回退：使用第一个显示器
+    let monitor = monitors.first()?;
+    let image = monitor.capture_image().ok()?;
+    encode_thumbnail_xcap(&image, width, height)
+}
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn generate_window_thumbnail(
+    windows: &[xcap::Window],
+    window_title: &str,
+    width: u32,
+    height: u32,
+) -> Option<String> {
+    // 尝试通过标题匹配窗口
+    for window in windows {
+        // 跳过最小化的窗口
+        if window.is_minimized() {
+            continue;
+        }
+
+        let title = window.title();
+        if title == window_title {
             let image = window.capture_image().ok()?;
-            encode_thumbnail_xcap(&image, width, height)
-        }
-    }
-}
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-fn find_monitor_by_target(monitors: &[xcap::Monitor], target: &scap::target::Target) -> Option<xcap::Monitor> {
-    // 尝试通过名称或 ID 匹配
-    if let Some(ref title) = target.title {
-        for monitor in monitors {
-            // xcap::Monitor::name() 返回 &str
-            let name = monitor.name();
-            if name.contains(title) || title.contains(name) {
-                return Some(monitor.clone());
-            }
-        }
-    }
-
-    // 回退：返回第一个显示器
-    monitors.first().cloned()
-}
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-fn find_window_by_target(windows: &[xcap::Window], target: &scap::target::Target) -> Option<xcap::Window> {
-    // 尝试通过标题匹配
-    if let Some(ref title) = target.title {
-        for window in windows {
-            // xcap::Window::title() 返回 &str
-            let window_title = window.title();
-            if window_title == *title {
-                return Some(window.clone());
-            }
+            return encode_thumbnail_xcap(&image, width, height);
         }
     }
 
