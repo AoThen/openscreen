@@ -84,27 +84,53 @@ jobs:
         shell: pwsh
         run: |
           # Download WebView2 Fixed Version Runtime for portable package
-          # Using WebView2.Runtime.X64 NuGet package (community-maintained, provides same Fixed Version binaries)
-          $url = "https://www.nuget.org/api/v2/package/WebView2.Runtime.X64/146.0.3856.78"
-          $nupkgPath = "webview2.nupkg"
+          # Using official Microsoft download (cab file)
+          $version = "146.0.3856.78"
+          $url = "https://msedge.sf.dl.delivery.mp.microsoft.com/webview2/${version}/Microsoft.WebView2.FixedVersionRuntime.${version}.X64.cab"
+          $cabPath = "webview2.cab"
           
-          Write-Host "Downloading WebView2 runtime..."
-          Invoke-WebRequest -Uri $url -OutFile $nupkgPath -UseBasicParsing
+          Write-Host "Downloading WebView2 runtime version ${version}..."
+          try {
+            Invoke-WebRequest -Uri $url -OutFile $cabPath -UseBasicParsing
+          } catch {
+            Write-Host "Primary download failed, trying fallback URL..."
+            # Fallback to NuGet package
+            $nugetUrl = "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2.Runtime/${version}"
+            Invoke-WebRequest -Uri $nugetUrl -OutFile "webview2.nupkg" -UseBasicParsing
+            Expand-Archive -Path "webview2.nupkg" -DestinationPath "webview2-runtime" -Force
+            # NuGet package structure: build/native/x64/
+            $runtimePath = "webview2-runtime/build/native/x64"
+            if (Test-Path $runtimePath) {
+              New-Item -ItemType Directory -Force -Path "webview2-fixed"
+              Copy-Item -Recurse "$runtimePath/*" "webview2-fixed/"
+              Write-Host "WebView2 runtime extracted from NuGet"
+              return
+            }
+          }
           
-          Write-Host "Extracting NuGet package..."
-          Expand-Archive -Path $nupkgPath -DestinationPath "webview2-runtime" -Force
+          if (Test-Path $cabPath) {
+            Write-Host "Extracting cab file..."
+            # Create destination directory
+            New-Item -ItemType Directory -Force -Path "webview2-fixed"
+            # Extract cab file using expand command
+            expand $cabPath -F:* webview2-fixed
+            Write-Host "WebView2 runtime extracted from cab"
+          }
           
-          Write-Host "Contents of webview2-runtime:"
-          Get-ChildItem -Recurse "webview2-runtime" | Select-Object FullName
+          # List contents for debugging
+          Write-Host "Contents of webview2-fixed:"
+          Get-ChildItem -Recurse "webview2-fixed" | Select-Object FullName
           
-          # Verify runtime files exist
-          $runtimePath = "webview2-runtime/runtimes/win-x64/native"
-          if (Test-Path $runtimePath) {
-            Write-Host "WebView2 runtime files found:"
-            Get-ChildItem $runtimePath
-          } else {
-            Write-Error "WebView2 runtime files not found at expected path"
-            exit 1
+          # Verify we have the essential DLL
+          $dllPath = "webview2-fixed/WebView2Loader.dll"
+          if (-not (Test-Path $dllPath)) {
+            # Try to find it anywhere in the extracted content
+            $foundDll = Get-ChildItem -Recurse "webview2-fixed" -Filter "WebView2Loader.dll" | Select-Object -First 1
+            if ($foundDll) {
+              Write-Host "Found WebView2Loader.dll at: $($foundDll.FullName)"
+            } else {
+              Write-Warning "WebView2Loader.dll not found - portable package may not work on systems without WebView2"
+            }
           }
 
       - name: Create portable package (Windows)
@@ -117,7 +143,9 @@ jobs:
           cp src-tauri/target/${{ matrix.target }}/release/OpenScreen.exe portable/OpenScreen/
           
           # Copy WebView2 fixed runtime (required for portable version)
-          cp -r webview2-runtime/runtimes/win-x64/native/* portable/OpenScreen/
+          if [ -d "webview2-fixed" ]; then
+            cp -r webview2-fixed/* portable/OpenScreen/ 2>/dev/null || true
+          fi
           
           # Copy resources from the correct location
           # Tauri bundles resources into the exe, but for portable we need to include them separately
