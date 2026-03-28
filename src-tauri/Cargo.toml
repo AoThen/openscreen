@@ -41,6 +41,9 @@ chrono = { version = "0.4", features = ["serde"] }
 # UUID
 uuid = { version = "1", features = ["v4"] }
 
+# URL 处理 (用于正确的 file:// URL 转换)
+url = "2"
+
 # 目录
 directories = "5"
 

@@ -59,10 +59,18 @@ pub fn create_hud_overlay_window(app: &AppHandle) -> Result<tauri::WebviewWindow
     let window_width = 500.0;
     let window_height = 155.0;
 
-    // 获取主显示器工作区域（简化实现，使用默认值）
-    // TODO: 使用 tauri-plugin-positioner 或 monitor API 获取实际工作区域
-    let work_area_width = 1920.0;
-    let work_area_height = 1080.0;
+    // 获取主显示器工作区域
+    let (work_area_width, work_area_height) = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| {
+            let size = monitor.size();
+            let scale = monitor.scale_factor();
+            // 转换为逻辑尺寸
+            ((size.width as f64) / scale, (size.height as f64) / scale)
+        })
+        .unwrap_or((1920.0, 1080.0));
 
     let x = (work_area_width - window_width) / 2.0;
     let y = work_area_height - window_height - 10.0;
@@ -140,9 +148,19 @@ pub fn create_source_selector_window(app: &AppHandle) -> Result<tauri::WebviewWi
     let window_width = 620.0;
     let window_height = 420.0;
 
-    // 居中显示
-    let work_area_width = 1920.0;
-    let work_area_height = 1080.0;
+    // 获取主显示器工作区域并居中显示
+    let (work_area_width, work_area_height) = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| {
+            let size = monitor.size();
+            let scale = monitor.scale_factor();
+            // 转换为逻辑尺寸
+            ((size.width as f64) / scale, (size.height as f64) / scale)
+        })
+        .unwrap_or((1920.0, 1080.0));
+    
     let x = (work_area_width - window_width) / 2.0;
     let y = (work_area_height - window_height) / 2.0;
 

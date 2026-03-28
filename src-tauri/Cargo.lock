@@ -3759,6 +3759,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-store",
  "tokio",
+ "url",
  "uuid",
  "winapi",
  "windows 0.58.0",

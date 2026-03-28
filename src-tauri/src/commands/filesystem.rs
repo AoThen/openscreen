@@ -317,9 +317,19 @@ pub async fn reveal_in_folder(file_path: String, app: AppHandle) -> Result<Revea
         // 尝试打开父目录
         if let Some(parent) = path.parent() {
             if parent.exists() {
-                app.opener()
-                    .open_path(parent.to_string_lossy().to_string(), None::<&str>)
-                    .map_err(|e| e.to_string())?;
+                #[cfg(target_os = "windows")]
+                {
+                    std::process::Command::new("explorer")
+                        .arg(parent.to_string_lossy().to_string())
+                        .spawn()
+                        .map_err(|e| format!("Failed to open explorer: {}", e))?;
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    app.opener()
+                        .open_path(parent.to_string_lossy().to_string(), None::<&str>)
+                        .map_err(|e| e.to_string())?;
+                }
                 return Ok(RevealInFolderResult {
                     success: true,
                     message: Some("Could not reveal item, but opened directory.".to_string()),
@@ -332,10 +342,27 @@ pub async fn reveal_in_folder(file_path: String, app: AppHandle) -> Result<Revea
         });
     }
 
-    // 使用 opener 打开文件所在目录
-    app.opener()
-        .open_path(path.to_string_lossy().to_string(), None::<&str>)
-        .map_err(|e| e.to_string())?;
+    // Windows: 使用 explorer.exe /select, 来选中文件
+    #[cfg(target_os = "windows")]
+    {
+        let path_str = path.canonicalize()
+            .map_err(|e| format!("Failed to canonicalize path: {}", e))?
+            .to_string_lossy()
+            .to_string();
+        
+        std::process::Command::new("explorer")
+            .args(["/select,", &path_str])
+            .spawn()
+            .map_err(|e| format!("Failed to reveal file in explorer: {}", e))?;
+    }
+
+    // macOS/Linux: 使用 opener 打开文件所在目录
+    #[cfg(not(target_os = "windows"))]
+    {
+        app.opener()
+            .open_path(path.to_string_lossy().to_string(), None::<&str>)
+            .map_err(|e| e.to_string())?;
+    }
 
     Ok(RevealInFolderResult {
         success: true,
@@ -364,12 +391,16 @@ pub async fn open_external_url(url: String, app: AppHandle) -> Result<(), String
 /// Tauri 将资源配置 (wallpapers, wasm) 打包到 resource_dir() 根目录
 #[tauri::command]
 pub fn get_asset_base_path(app: AppHandle) -> Option<String> {
+    use url::Url;
+    
     let resource_path = app.path().resource_dir().ok()?;
     
     // Tauri 将 resources 配置中的文件直接放在 resource_dir 根目录
     // 例如: ../public/wallpapers -> resource_dir()/wallpapers
-    // 返回 file:// URL
-    Some(format!("file://{}/", resource_path.display()))
+    // 返回 file:// URL (使用 url crate 确保跨平台正确性)
+    Url::from_file_path(&resource_path)
+        .ok()
+        .map(|url| url.to_string())
 }
 
 /// 获取录制目录
