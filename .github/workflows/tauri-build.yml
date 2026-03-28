@@ -84,8 +84,8 @@ jobs:
         shell: pwsh
         run: |
           # Download WebView2 Fixed Version Runtime for portable package
-          # NuGet package is actually a zip file (.nupkg)
-          $url = "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2.FixedVersionRuntime/121.0.2277.128"
+          # Using WebView2.Runtime.X64 NuGet package (community-maintained, provides same Fixed Version binaries)
+          $url = "https://www.nuget.org/api/v2/package/WebView2.Runtime.X64/146.0.3856.78"
           $nupkgPath = "webview2.nupkg"
           
           Write-Host "Downloading WebView2 runtime..."
