@@ -28,6 +28,11 @@ if (!gotTheLock) {
 	process.exit(0);
 }
 
+// Performance optimizations - hardware acceleration and memory settings
+app.commandLine.appendSwitch("enable-gpu-rasterization");
+app.commandLine.appendSwitch("enable-zero-copy");
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
+
 // Use Screen & System Audio Recording permissions instead of CoreAudio Tap API on macOS.
 // CoreAudio Tap requires NSAudioCaptureUsageDescription in the parent app's Info.plist,
 // which doesn't work when running from a terminal/IDE during development, makes my life easier

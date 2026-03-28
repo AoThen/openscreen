@@ -59,6 +59,7 @@ export function createHudOverlayWindow(): BrowserWindow {
 			nodeIntegration: false,
 			contextIsolation: true,
 			backgroundThrottling: false,
+			spellcheck: false,
 		},
 	});
 
@@ -110,6 +111,7 @@ export function createEditorWindow(): BrowserWindow {
 			contextIsolation: true,
 			webSecurity: false,
 			backgroundThrottling: false,
+			spellcheck: false,
 		},
 	});
 
@@ -151,6 +153,7 @@ export function createSourceSelectorWindow(): BrowserWindow {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
 			contextIsolation: true,
+			spellcheck: false,
 		},
 	});
 
