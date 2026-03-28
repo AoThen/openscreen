@@ -166,7 +166,7 @@ export class VideoExporter {
 			let frameIndex = 0;
 			const maxEncodeQueue =
 				encoderPreference === "prefer-software"
-					? Math.min(this.MAX_ENCODE_QUEUE, 32)
+					? Math.min(this.MAX_ENCODE_QUEUE, 64)
 					: this.MAX_ENCODE_QUEUE;
 
 			webcamFrameQueue = this.config.webcamVideoUrl ? new AsyncVideoFrameQueue() : null;
@@ -509,9 +509,7 @@ export class VideoExporter {
 	}
 
 	private getEncoderPreferences(): HardwareAcceleration[] {
-		if (typeof navigator !== "undefined" && /\bWindows\b/i.test(navigator.userAgent)) {
-			return ["prefer-software", "prefer-hardware"];
-		}
+		// 统一优先硬件编码，失败后回退软件编码
 		return ["prefer-hardware", "prefer-software"];
 	}
 
