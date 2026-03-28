@@ -79,6 +79,24 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
           retention-days: 30
 
+      - name: Create portable package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir -p portable/OpenScreen/assets
+          cp src-tauri/target/${{ matrix.target }}/release/OpenScreen.exe portable/OpenScreen/
+          cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wallpapers portable/OpenScreen/assets/
+          cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wasm portable/OpenScreen/assets/
+          cd portable
+          7z a -tzip ../OpenScreen-${{ github.ref_name }}-windows-portable.zip OpenScreen
+
+      - name: Upload portable artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tauri-${{ matrix.platform }}-portable
+          path: OpenScreen-*-windows-portable.zip
+          retention-days: 30
+
       - name: Upload artifacts (Linux)
         if: matrix.os == 'ubuntu-22.04'
         uses: actions/upload-artifact@v7
