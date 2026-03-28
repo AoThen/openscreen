@@ -79,13 +79,46 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
           retention-days: 30
 
+      - name: Download WebView2 Fixed Runtime (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Download WebView2 Fixed Version Runtime for portable package
+          curl -L -o webview2-fixed.tar.gz "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2.FixedVersionRuntime/121.0.2277.128"
+          mkdir -p webview2-runtime
+          tar -xzf webview2-fixed.tar.gz -C webview2-runtime
+          ls -la webview2-runtime/runtimes/win-x64/native/
+
       - name: Create portable package (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir -p portable/OpenScreen/assets
+          mkdir -p portable/OpenScreen
+          
+          # Copy main executable
           cp src-tauri/target/${{ matrix.target }}/release/OpenScreen.exe portable/OpenScreen/
-          cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wallpapers portable/OpenScreen/assets/
-          cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wasm portable/OpenScreen/assets/
+          
+          # Copy WebView2 fixed runtime (required for portable version)
+          cp -r webview2-runtime/runtimes/win-x64/native/* portable/OpenScreen/
+          
+          # Copy resources from the correct location
+          # Tauri bundles resources into the exe, but for portable we need to include them separately
+          # Resources are embedded in the bundle, extract from _up_ directory if it exists
+          if [ -d "src-tauri/target/${{ matrix.target }}/release/_up_" ]; then
+            mkdir -p portable/OpenScreen/assets
+            cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wallpapers portable/OpenScreen/assets/ 2>/dev/null || true
+            cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wasm portable/OpenScreen/assets/ 2>/dev/null || true
+          fi
+          
+          # Also try to copy from bundle nsis location
+          if [ -d "src-tauri/target/${{ matrix.target }}/release/bundle/nsis/OpenScreen_${{ github.ref_name }}_x64-setup/nsis/_up_" ]; then
+            mkdir -p portable/OpenScreen/assets
+            cp -r src-tauri/target/${{ matrix.target }}/release/bundle/nsis/OpenScreen_${{ github.ref_name }}_x64-setup/nsis/_up_/public/wallpapers portable/OpenScreen/assets/ 2>/dev/null || true
+            cp -r src-tauri/target/${{ matrix.target }}/release/bundle/nsis/OpenScreen_${{ github.ref_name }}_x64-setup/nsis/_up_/public/wasm portable/OpenScreen/assets/ 2>/dev/null || true
+          fi
+          
+          # List contents for debugging
+          echo "Portable package contents:"
+          ls -laR portable/OpenScreen/
+          
           cd portable
           7z a -tzip ../OpenScreen-${{ github.ref_name }}-windows-portable.zip OpenScreen
 

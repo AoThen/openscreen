@@ -45,6 +45,12 @@
 			"nsis": {
 				"installMode": "both",
 				"languages": ["SimpChinese", "English", "Spanish"]
+			},
+			"webviewInstallMode": {
+				"type": "embedBootstrapper"
+			},
+			"wix": {
+				"language": "zh-CN"
 			}
 		},
 		"macOS": {

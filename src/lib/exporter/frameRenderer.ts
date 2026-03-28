@@ -1019,5 +1019,12 @@ export class FrameRenderer {
 		this.shadowCtx = null;
 		this.compositeCanvas = null;
 		this.compositeCtx = null;
+		// 清理 blur 相关的缓存 canvas
+		this.blurTempCanvas = null;
+		this.blurTempCtx = null;
+		this.blurRegionCanvas = null;
+		this.blurRegionCtx = null;
+		this.blurMaskCanvas = null;
+		this.blurMaskCtx = null;
 	}
 }

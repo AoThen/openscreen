@@ -361,13 +361,15 @@ pub async fn open_external_url(url: String, app: AppHandle) -> Result<(), String
 }
 
 /// 获取资源基础路径
+/// Tauri 将资源配置 (wallpapers, wasm) 打包到 resource_dir() 根目录
 #[tauri::command]
 pub fn get_asset_base_path(app: AppHandle) -> Option<String> {
     let resource_path = app.path().resource_dir().ok()?;
-    let asset_path = resource_path.join("assets");
-
+    
+    // Tauri 将 resources 配置中的文件直接放在 resource_dir 根目录
+    // 例如: ../public/wallpapers -> resource_dir()/wallpapers
     // 返回 file:// URL
-    Some(format!("file://{}/", asset_path.display()))
+    Some(format!("file://{}/", resource_path.display()))
 }
 
 /// 获取录制目录

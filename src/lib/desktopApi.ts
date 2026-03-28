@@ -558,13 +558,10 @@ export function getDesktopApiSync(): DesktopApi | null {
 	return null;
 }
 
-// 直接导出 window.electronAPI 兼容访问
+// 直接导出统一 API（所有调用返回 Promise 以确保类型一致）
 export const desktopApi = new Proxy({} as DesktopApi, {
 	get(_target, prop: string) {
-		if (isElectron()) {
-			return (window as { electronAPI: Record<string, unknown> }).electronAPI[prop];
-		}
-		// Tauri 需要异步初始化，返回占位函数
+		// 统一返回异步函数，确保 Electron 和 Tauri 类型一致
 		return async (...args: unknown[]) => {
 			const api = await getDesktopApi();
 			const method = (api as unknown as Record<string, unknown>)[prop];
