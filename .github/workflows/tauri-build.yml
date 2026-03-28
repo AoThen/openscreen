@@ -79,61 +79,6 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
           retention-days: 30
 
-      - name: Download WebView2 Fixed Runtime (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          # Download WebView2 Fixed Version Runtime for portable package
-          # Using NuGet package (most reliable source)
-          # Package: WebView2.Runtime.X64 (correct package name)
-          
-          # Fetch latest version from NuGet API
-          $nugetApiUrl = "https://api.nuget.org/v3-flatcontainer/webview2.runtime.x64/index.json"
-          $versionsJson = Invoke-RestMethod -Uri $nugetApiUrl
-          $latestVersion = $versionsJson.versions[-1]
-          Write-Host "Latest WebView2.Runtime.X64 version: $latestVersion"
-          
-          # Download the NuGet package
-          $nugetPackageUrl = "https://www.nuget.org/api/v2/package/WebView2.Runtime.X64/$latestVersion"
-          Write-Host "Downloading from: $nugetPackageUrl"
-          Invoke-WebRequest -Uri $nugetPackageUrl -OutFile "webview2.nupkg" -UseBasicParsing
-          
-          # Extract the package
-          Expand-Archive -Path "webview2.nupkg" -DestinationPath "webview2-extracted" -Force
-          
-          # The runtime files are in the root of the package for WebView2.Runtime.X64
-          # Create the final directory
-          New-Item -ItemType Directory -Force -Path "webview2-fixed"
-          
-          # Copy runtime files (they're directly in the package root or in a subfolder)
-          if (Test-Path "webview2-extracted/WebView2Loader.dll") {
-            Copy-Item -Recurse "webview2-extracted/*" "webview2-fixed/"
-          } elseif (Test-Path "webview2-extracted/runtimes/win-x64/native") {
-            Copy-Item -Recurse "webview2-extracted/runtimes/win-x64/native/*" "webview2-fixed/"
-          } elseif (Test-Path "webview2-extracted/build/native/x64") {
-            Copy-Item -Recurse "webview2-extracted/build/native/x64/*" "webview2-fixed/"
-          } else {
-            # Fallback: copy everything and let the portable packaging handle it
-            Copy-Item -Recurse "webview2-extracted/*" "webview2-fixed/"
-          }
-          
-          Write-Host "WebView2 runtime extracted successfully"
-          
-          # List contents for debugging
-          Write-Host "Contents of webview2-fixed:"
-          Get-ChildItem -Recurse "webview2-fixed" | Select-Object FullName
-          
-          # Verify we have the essential DLL
-          $dllPath = "webview2-fixed/WebView2Loader.dll"
-          if (-not (Test-Path $dllPath)) {
-            $foundDll = Get-ChildItem -Recurse "webview2-fixed" -Filter "WebView2Loader.dll" | Select-Object -First 1
-            if ($foundDll) {
-              Write-Host "Found WebView2Loader.dll at: $($foundDll.FullName)"
-            } else {
-              Write-Warning "WebView2Loader.dll not found - portable package may not work on systems without WebView2"
-            }
-          }
-
       - name: Create portable package (Windows)
         if: matrix.os == 'windows-latest'
         shell: bash
@@ -143,26 +88,9 @@ jobs:
           # Copy main executable
           cp src-tauri/target/${{ matrix.target }}/release/OpenScreen.exe portable/OpenScreen/
           
-          # Copy WebView2 fixed runtime (required for portable version)
-          if [ -d "webview2-fixed" ]; then
-            cp -r webview2-fixed/* portable/OpenScreen/ 2>/dev/null || true
-          fi
-          
-          # Copy resources from the correct location
-          # Tauri bundles resources into the exe, but for portable we need to include them separately
-          # Resources are embedded in the bundle, extract from _up_ directory if it exists
-          if [ -d "src-tauri/target/${{ matrix.target }}/release/_up_" ]; then
-            mkdir -p portable/OpenScreen/assets
-            cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wallpapers portable/OpenScreen/assets/ 2>/dev/null || true
-            cp -r src-tauri/target/${{ matrix.target }}/release/_up_/public/wasm portable/OpenScreen/assets/ 2>/dev/null || true
-          fi
-          
-          # Also try to copy from bundle nsis location
-          if [ -d "src-tauri/target/${{ matrix.target }}/release/bundle/nsis/OpenScreen_${{ github.ref_name }}_x64-setup/nsis/_up_" ]; then
-            mkdir -p portable/OpenScreen/assets
-            cp -r src-tauri/target/${{ matrix.target }}/release/bundle/nsis/OpenScreen_${{ github.ref_name }}_x64-setup/nsis/_up_/public/wallpapers portable/OpenScreen/assets/ 2>/dev/null || true
-            cp -r src-tauri/target/${{ matrix.target }}/release/bundle/nsis/OpenScreen_${{ github.ref_name }}_x64-setup/nsis/_up_/public/wasm portable/OpenScreen/assets/ 2>/dev/null || true
-          fi
+          # Note: WebView2 runtime is NOT included to keep package small (~60MB)
+          # Users need to have WebView2 installed on their system
+          # Most Windows 10/11 systems already have it pre-installed
           
           # List contents for debugging
           echo "Portable package contents:"
