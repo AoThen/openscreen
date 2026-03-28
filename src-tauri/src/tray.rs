@@ -22,7 +22,7 @@ pub fn create_tray(app: &AppHandle) -> Result<TrayIcon, String> {
         .map_err(|e| e.to_string())?;
 
     // 创建托盘图标
-    let tray = TrayIconBuilder::new()
+    let tray = TrayIconBuilder::with_id("main")
         .icon(get_default_icon()?)
         .menu(&menu)
         .show_menu_on_left_click(true)

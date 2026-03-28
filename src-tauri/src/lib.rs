@@ -87,22 +87,36 @@ pub fn run() {
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
-                app.handle().plugin(
+                if let Err(e) = app.handle().plugin(
                     tauri_plugin_log::Builder::default()
                         .level(log::LevelFilter::Info)
                         .build(),
-                )?;
+                ) {
+                    eprintln!("Failed to initialize log plugin: {}", e);
+                }
             }
             
             // 创建应用菜单
-            let app_menu = menu::create_app_menu(app.handle())?;
-            app.set_menu(app_menu)?;
+            match menu::create_app_menu(app.handle()) {
+                Ok(app_menu) => {
+                    if let Err(e) = app.set_menu(app_menu) {
+                        eprintln!("Failed to set app menu: {}", e);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to create app menu: {}", e);
+                }
+            }
             
             // 创建系统托盘
-            create_tray(app.handle())?;
+            if let Err(e) = create_tray(app.handle()) {
+                eprintln!("Failed to create system tray: {}", e);
+            }
             
             // 创建初始 HUD 窗口
-            create_hud_overlay_window(app.handle())?;
+            if let Err(e) = create_hud_overlay_window(app.handle()) {
+                eprintln!("Failed to create HUD window: {}", e);
+            }
             
             Ok(())
         })
