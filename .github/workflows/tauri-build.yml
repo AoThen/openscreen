@@ -81,15 +81,35 @@ jobs:
 
       - name: Download WebView2 Fixed Runtime (Windows)
         if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
           # Download WebView2 Fixed Version Runtime for portable package
-          curl -L -o webview2-fixed.tar.gz "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2.FixedVersionRuntime/121.0.2277.128"
-          mkdir -p webview2-runtime
-          tar -xzf webview2-fixed.tar.gz -C webview2-runtime
-          ls -la webview2-runtime/runtimes/win-x64/native/
+          # NuGet package is actually a zip file (.nupkg)
+          $url = "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2.FixedVersionRuntime/121.0.2277.128"
+          $nupkgPath = "webview2.nupkg"
+          
+          Write-Host "Downloading WebView2 runtime..."
+          Invoke-WebRequest -Uri $url -OutFile $nupkgPath -UseBasicParsing
+          
+          Write-Host "Extracting NuGet package..."
+          Expand-Archive -Path $nupkgPath -DestinationPath "webview2-runtime" -Force
+          
+          Write-Host "Contents of webview2-runtime:"
+          Get-ChildItem -Recurse "webview2-runtime" | Select-Object FullName
+          
+          # Verify runtime files exist
+          $runtimePath = "webview2-runtime/runtimes/win-x64/native"
+          if (Test-Path $runtimePath) {
+            Write-Host "WebView2 runtime files found:"
+            Get-ChildItem $runtimePath
+          } else {
+            Write-Error "WebView2 runtime files not found at expected path"
+            exit 1
+          }
 
       - name: Create portable package (Windows)
         if: matrix.os == 'windows-latest'
+        shell: bash
         run: |
           mkdir -p portable/OpenScreen
           
