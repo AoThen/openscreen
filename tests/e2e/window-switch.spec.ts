@@ -237,8 +237,10 @@ test.describe("Window Management", () => {
 			await hudWindow.waitForLoadState("domcontentloaded");
 
 			console.log("[TEST] Step 2: Verifying window is visible initially...");
-			const isVisibleBefore = await hudWindow.isVisible();
-			expect(isVisibleBefore).toBe(true);
+			// Use evaluate to check document visibilityState instead of Page.isVisible()
+			// which requires a selector argument
+			const visibilityBefore = await hudWindow.evaluate(() => document.visibilityState);
+			expect(visibilityBefore).toBe("visible");
 
 			console.log("[TEST] Step 3: Triggering hide (minimize) command...");
 			await hudWindow.evaluate(async () => {
@@ -248,8 +250,8 @@ test.describe("Window Management", () => {
 			console.log("[TEST] Step 4: Verifying window is minimized...");
 			await hudWindow.waitForTimeout(500);
 
-			const isMinimized = await hudWindow.isMinimized();
-			console.log(`[TEST] Window minimized: ${isMinimized}`);
+			const isMinimized = await hudWindow.evaluate(() => document.hidden);
+			console.log(`[TEST] Document hidden: ${isMinimized}`);
 
 			// In headless mode, minimize may not work as expected, so we just verify the API was called
 			console.log("[TEST] ✅ HUD hide test passed!");

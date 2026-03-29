@@ -225,6 +225,14 @@ export function registerIpcHandlers(
 	showHudWindow?: () => void,
 	setMainWindow?: (win: BrowserWindow | null) => void,
 ) {
+	// Handle HUD overlay hide/minimize command
+	ipcMain.on("hud-overlay-hide", () => {
+		const mainWin = getMainWindow();
+		if (mainWin && !mainWin.isDestroyed()) {
+			mainWin.minimize();
+		}
+	});
+
 	ipcMain.handle("get-system-fonts", async () => {
 		try {
 			const fonts = await fontList.getFonts();
@@ -305,15 +313,28 @@ export function registerIpcHandlers(
 		return new Promise<void>((resolve) => {
 			const mainWin = getMainWindow();
 			if (mainWin && !mainWin.isDestroyed()) {
-				// Wait for window to close before creating new one
-				mainWin.once("closed", () => {
-					const newWin = createEditorWindow();
-					if (setMainWindow) {
-						setMainWindow(newWin);
+				// CRITICAL: Resolve BEFORE closing the window, otherwise the renderer
+				// process gets terminated before the IPC response can be sent.
+				// Use setImmediate to schedule window operations after IPC response.
+				resolve();
+				setImmediate(() => {
+					// Check again in case window was already closed
+					if (!mainWin.isDestroyed()) {
+						mainWin.once("closed", () => {
+							const newWin = createEditorWindow();
+							if (setMainWindow) {
+								setMainWindow(newWin);
+							}
+						});
+						mainWin.close();
+					} else {
+						// Window was already closed, just create editor
+						const newWin = createEditorWindow();
+						if (setMainWindow) {
+							setMainWindow(newWin);
+						}
 					}
-					resolve();
 				});
-				mainWin.close();
 			} else {
 				// No existing window, create directly
 				const newWin = createEditorWindow();

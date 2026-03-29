@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BrowserWindow, ipcMain, screen } from "electron";
+import { BrowserWindow, screen } from "electron";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -8,14 +8,6 @@ const APP_ROOT = path.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const RENDERER_DIST = path.join(APP_ROOT, "dist");
 const HEADLESS = process.env["HEADLESS"] === "true";
-
-let hudOverlayWindow: BrowserWindow | null = null;
-
-ipcMain.on("hud-overlay-hide", () => {
-	if (hudOverlayWindow && !hudOverlayWindow.isDestroyed()) {
-		hudOverlayWindow.minimize();
-	}
-});
 
 export function createHudOverlayWindow(): BrowserWindow {
 	// Use try-catch for screen operations in case they fail in headless environments
@@ -65,14 +57,6 @@ export function createHudOverlayWindow(): BrowserWindow {
 
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", new Date().toLocaleString());
-	});
-
-	hudOverlayWindow = win;
-
-	win.on("closed", () => {
-		if (hudOverlayWindow === win) {
-			hudOverlayWindow = null;
-		}
 	});
 
 	if (VITE_DEV_SERVER_URL) {
