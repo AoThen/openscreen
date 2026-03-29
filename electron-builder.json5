@@ -13,6 +13,8 @@
   "files": [
     "dist",
     "dist-electron-legacy",
+    "!node_modules/**/*",
+    "node_modules/font-list/**/*",
     "!*.png",
     "!preview*.png",
     "!*.md",

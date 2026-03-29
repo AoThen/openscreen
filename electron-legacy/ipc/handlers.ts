@@ -213,12 +213,13 @@ function sampleCursorPoint() {
 }
 
 export function registerIpcHandlers(
-	createEditorWindow: () => void,
+	createEditorWindow: () => BrowserWindow,
 	createSourceSelectorWindow: () => BrowserWindow,
 	getMainWindow: () => BrowserWindow | null,
 	getSourceSelectorWindow: () => BrowserWindow | null,
 	onRecordingStateChange?: (recording: boolean, sourceName: string) => void,
 	showHudWindow?: () => void,
+	setMainWindow?: (win: BrowserWindow | null) => void,
 ) {
 	ipcMain.handle("get-system-fonts", async () => {
 		try {
@@ -301,7 +302,13 @@ export function registerIpcHandlers(
 		if (mainWin) {
 			mainWin.close();
 		}
-		createEditorWindow();
+		// Use setImmediate to ensure the old window is fully closed before creating the new one
+		setImmediate(() => {
+			const newWin = createEditorWindow();
+			if (setMainWindow) {
+				setMainWindow(newWin);
+			}
+		});
 	});
 
 	ipcMain.handle("show-hud-window", () => {

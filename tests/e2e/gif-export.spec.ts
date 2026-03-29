@@ -100,11 +100,11 @@ test("exports a GIF from a loaded video", async () => {
 		});
 
 		console.log("[TEST] Step 3: Setting video path and switching to editor...");
-		await hudWindow.evaluate((videoPath: string) => {
+		await hudWindow.evaluate(async (videoPath: string) => {
 			console.log(`[HUD] Setting video path: ${videoPath}`);
-			window.electronAPI.setCurrentVideoPath(videoPath);
+			await window.electronAPI.setCurrentVideoPath(videoPath);
 			try {
-				window.electronAPI.switchToEditor();
+				await window.electronAPI.switchToEditor();
 			} catch (e) {
 				console.log(`[HUD] switchToEditor threw (expected): ${e}`);
 			}

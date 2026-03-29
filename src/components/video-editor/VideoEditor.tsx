@@ -326,20 +326,26 @@ export default function VideoEditor() {
 	useEffect(() => {
 		async function loadInitialData() {
 			try {
+				console.log("[VideoEditor] Loading initial data...");
+
 				const currentProjectResult = await desktopApi.loadCurrentProjectFile();
+				console.log("[VideoEditor] loadCurrentProjectFile result:", currentProjectResult);
 				if (currentProjectResult.success && currentProjectResult.project) {
 					const restored = await applyLoadedProject(
 						currentProjectResult.project,
 						currentProjectResult.path ?? null,
 					);
 					if (restored) {
+						console.log("[VideoEditor] Loaded from project file");
 						return;
 					}
 				}
 
 				const currentSessionResult = await desktopApi.getCurrentRecordingSession();
+				console.log("[VideoEditor] getCurrentRecordingSession result:", currentSessionResult);
 				if (currentSessionResult.success && currentSessionResult.session) {
 					const session = currentSessionResult.session;
+					console.log("[VideoEditor] Session screenVideoPath:", session.screenVideoPath);
 					const sourcePath = fromFileUrl(session.screenVideoPath);
 					const webcamSourcePath = session.webcamVideoPath
 						? fromFileUrl(session.webcamVideoPath)
@@ -350,10 +356,12 @@ export default function VideoEditor() {
 					setWebcamVideoPath(webcamSourcePath ? toFileUrl(webcamSourcePath) : null);
 					setCurrentProjectPath(null);
 					setLastSavedSnapshot(null);
+					console.log("[VideoEditor] Loaded from recording session:", sourcePath);
 					return;
 				}
 
 				const result = await desktopApi.getCurrentVideoPath();
+				console.log("[VideoEditor] getCurrentVideoPath result:", result);
 				if (result.success && result.path) {
 					const sourcePath = fromFileUrl(result.path);
 					setVideoSourcePath(sourcePath);
@@ -362,10 +370,13 @@ export default function VideoEditor() {
 					setWebcamVideoPath(null);
 					setCurrentProjectPath(null);
 					setLastSavedSnapshot(null);
+					console.log("[VideoEditor] Loaded from video path:", sourcePath);
 				} else {
+					console.error("[VideoEditor] No video found to load");
 					setError("No video to load. Please record or select a video.");
 				}
 			} catch (err) {
+				console.error("[VideoEditor] Error loading video:", err);
 				setError("Error loading video: " + String(err));
 			} finally {
 				setLoading(false);

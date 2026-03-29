@@ -283,7 +283,7 @@ function forceCloseEditorWindow(windowToClose: BrowserWindow | null) {
 	});
 }
 
-function createEditorWindowWrapper() {
+function createEditorWindowWrapper(): BrowserWindow {
 	if (mainWindow) {
 		isForceClosing = true;
 		mainWindow.close();
@@ -328,6 +328,8 @@ function createEditorWindowWrapper() {
 		}
 		// choice === 2: Cancel — do nothing, window stays open
 	});
+
+	return mainWindow;
 }
 
 function createSourceSelectorWindowWrapper() {
@@ -416,6 +418,9 @@ app.whenReady().then(async () => {
 				}
 			},
 			showMainWindow,
+			(win: BrowserWindow | null) => {
+				mainWindow = win;
+			},
 		);
 		createWindow();
 	} catch (error) {
