@@ -302,23 +302,27 @@ export function registerIpcHandlers(
 	});
 
 	ipcMain.handle("switch-to-editor", () => {
-		const mainWin = getMainWindow();
-		if (mainWin && !mainWin.isDestroyed()) {
-			// Wait for window to close before creating new one
-			mainWin.once("closed", () => {
+		return new Promise<void>((resolve) => {
+			const mainWin = getMainWindow();
+			if (mainWin && !mainWin.isDestroyed()) {
+				// Wait for window to close before creating new one
+				mainWin.once("closed", () => {
+					const newWin = createEditorWindow();
+					if (setMainWindow) {
+						setMainWindow(newWin);
+					}
+					resolve();
+				});
+				mainWin.close();
+			} else {
+				// No existing window, create directly
 				const newWin = createEditorWindow();
 				if (setMainWindow) {
 					setMainWindow(newWin);
 				}
-			});
-			mainWin.close();
-		} else {
-			// No existing window, create directly
-			const newWin = createEditorWindow();
-			if (setMainWindow) {
-				setMainWindow(newWin);
+				resolve();
 			}
-		}
+		});
 	});
 
 	ipcMain.handle("show-hud-window", () => {
