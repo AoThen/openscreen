@@ -299,7 +299,7 @@ export function registerIpcHandlers(
 
 	ipcMain.handle("switch-to-editor", () => {
 		const mainWin = getMainWindow();
-		if (mainWin) {
+		if (mainWin && !mainWin.isDestroyed()) {
 			mainWin.close();
 		}
 		// Use setImmediate to ensure the old window is fully closed before creating the new one

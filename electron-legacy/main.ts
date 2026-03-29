@@ -286,8 +286,13 @@ function forceCloseEditorWindow(windowToClose: BrowserWindow | null) {
 function createEditorWindowWrapper(): BrowserWindow {
 	if (mainWindow) {
 		isForceClosing = true;
-		mainWindow.close();
-		isForceClosing = false;
+		const oldWindow = mainWindow;
+		oldWindow.on("closed", () => {
+			if (isForceClosing) {
+				isForceClosing = false;
+			}
+		});
+		oldWindow.close();
 		mainWindow = null;
 	}
 	mainWindow = createEditorWindow();
