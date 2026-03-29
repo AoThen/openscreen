@@ -188,27 +188,31 @@ function stopCursorCapture() {
 }
 
 function sampleCursorPoint() {
-	const cursor = screen.getCursorScreenPoint();
-	const sourceDisplayId = Number(selectedSource?.display_id);
-	const sourceDisplay = Number.isFinite(sourceDisplayId)
-		? (screen.getAllDisplays().find((display) => display.id === sourceDisplayId) ?? null)
-		: null;
-	const display = sourceDisplay ?? screen.getDisplayNearestPoint(cursor);
-	const bounds = display.bounds;
-	const width = Math.max(1, bounds.width);
-	const height = Math.max(1, bounds.height);
+	try {
+		const cursor = screen.getCursorScreenPoint();
+		const sourceDisplayId = Number(selectedSource?.display_id);
+		const sourceDisplay = Number.isFinite(sourceDisplayId)
+			? (screen.getAllDisplays().find((display) => display.id === sourceDisplayId) ?? null)
+			: null;
+		const display = sourceDisplay ?? screen.getDisplayNearestPoint(cursor);
+		const bounds = display.bounds;
+		const width = Math.max(1, bounds.width);
+		const height = Math.max(1, bounds.height);
 
-	const cx = clamp((cursor.x - bounds.x) / width, 0, 1);
-	const cy = clamp((cursor.y - bounds.y) / height, 0, 1);
+		const cx = clamp((cursor.x - bounds.x) / width, 0, 1);
+		const cy = clamp((cursor.y - bounds.y) / height, 0, 1);
 
-	activeCursorSamples.push({
-		timeMs: Math.max(0, Date.now() - cursorCaptureStartTimeMs),
-		cx,
-		cy,
-	});
+		activeCursorSamples.push({
+			timeMs: Math.max(0, Date.now() - cursorCaptureStartTimeMs),
+			cx,
+			cy,
+		});
 
-	if (activeCursorSamples.length > MAX_CURSOR_SAMPLES) {
-		activeCursorSamples.shift();
+		if (activeCursorSamples.length > MAX_CURSOR_SAMPLES) {
+			activeCursorSamples.shift();
+		}
+	} catch {
+		// Screen API may fail in headless environments; silently ignore
 	}
 }
 
@@ -246,7 +250,7 @@ export function registerIpcHandlers(
 	ipcMain.handle("select-source", (_, source: SelectedSource) => {
 		selectedSource = source;
 		const sourceSelectorWin = getSourceSelectorWindow();
-		if (sourceSelectorWin) {
+		if (sourceSelectorWin && !sourceSelectorWin.isDestroyed()) {
 			sourceSelectorWin.close();
 		}
 		return selectedSource;
@@ -300,15 +304,21 @@ export function registerIpcHandlers(
 	ipcMain.handle("switch-to-editor", () => {
 		const mainWin = getMainWindow();
 		if (mainWin && !mainWin.isDestroyed()) {
+			// Wait for window to close before creating new one
+			mainWin.once("closed", () => {
+				const newWin = createEditorWindow();
+				if (setMainWindow) {
+					setMainWindow(newWin);
+				}
+			});
 			mainWin.close();
-		}
-		// Use setImmediate to ensure the old window is fully closed before creating the new one
-		setImmediate(() => {
+		} else {
+			// No existing window, create directly
 			const newWin = createEditorWindow();
 			if (setMainWindow) {
 				setMainWindow(newWin);
 			}
-		});
+		}
 	});
 
 	ipcMain.handle("show-hud-window", () => {
@@ -319,7 +329,7 @@ export function registerIpcHandlers(
 
 	ipcMain.handle("close-source-selector", () => {
 		const sourceSelectorWin = getSourceSelectorWindow();
-		if (sourceSelectorWin) {
+		if (sourceSelectorWin && !sourceSelectorWin.isDestroyed()) {
 			sourceSelectorWin.close();
 		}
 	});

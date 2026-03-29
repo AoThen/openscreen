@@ -301,9 +301,12 @@ function createEditorWindowWrapper(): BrowserWindow {
 	mainWindow.on("close", (event) => {
 		if (isForceClosing || !editorHasUnsavedChanges) return;
 
+		// Double-check mainWindow is still valid
+		if (!mainWindow || mainWindow.isDestroyed()) return;
+
 		event.preventDefault();
 
-		const choice = dialog.showMessageBoxSync(mainWindow!, {
+		const choice = dialog.showMessageBoxSync(mainWindow, {
 			type: "warning",
 			buttons: [
 				mainT("dialogs", "unsavedChanges.saveAndClose"),
@@ -323,9 +326,19 @@ function createEditorWindowWrapper(): BrowserWindow {
 		if (choice === 0) {
 			// Save & Close — tell renderer to save, then close
 			windowToClose.webContents.send("request-save-before-close");
-			ipcMain.once("save-before-close-done", (_, shouldClose: boolean) => {
+
+			// Create named handler so we can remove it if needed
+			const onSaveDone = (_: unknown, shouldClose: boolean) => {
+				ipcMain.removeListener("save-before-close-done", onSaveDone);
 				if (!shouldClose) return;
 				forceCloseEditorWindow(windowToClose);
+			};
+
+			ipcMain.once("save-before-close-done", onSaveDone);
+
+			// Clean up listener if window closes before save completes
+			windowToClose.once("closed", () => {
+				ipcMain.removeListener("save-before-close-done", onSaveDone);
 			});
 		} else if (choice === 1) {
 			// Discard & Close
