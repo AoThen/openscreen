@@ -21,6 +21,34 @@ function setupConsoleLogging(app: Electron.Application, prefix: string) {
 	});
 }
 
+// Helper to cleanly quit the app in E2E tests
+async function quitApp(app: Electron.Application) {
+	try {
+		// Try to use the E2E quit handler first
+		const mainWindow = await app.firstWindow({ timeout: 5000 }).catch(() => null);
+		if (mainWindow) {
+			await mainWindow
+				.evaluate(async () => {
+					try {
+						await (
+							window as unknown as { electronAPI: { e2eQuitApp: () => Promise<void> } }
+						).electronAPI.e2eQuitApp();
+					} catch {
+						// Ignore if handler doesn't exist
+					}
+				})
+				.catch(() => {
+					// Ignore evaluation errors during quit
+				});
+		}
+	} catch {
+		// Ignore errors in quit process
+	}
+	// Force close after a short delay
+	await new Promise((resolve) => setTimeout(resolve, 500));
+	await app.close();
+}
+
 test("exports an MP4 video from a loaded video", async () => {
 	const outputPath = path.join(os.tmpdir(), `test-mp4-export-${Date.now()}.mp4`);
 	console.log(`[TEST] Output path: ${outputPath}`);
@@ -263,7 +291,7 @@ test("exports an MP4 video from a loaded video", async () => {
 		console.log("[TEST] ✅ Test passed!");
 	} finally {
 		console.log("[TEST] Cleaning up...");
-		await app.close();
+		await quitApp(app);
 		if (fs.existsSync(outputPath)) {
 			fs.unlinkSync(outputPath);
 		}

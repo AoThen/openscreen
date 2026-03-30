@@ -161,4 +161,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	requestMicrophonePermission: () => {
 		return ipcRenderer.invoke("request-microphone-permission");
 	},
+	// E2E test helper
+	e2eQuitApp: () => {
+		return ipcRenderer.invoke("e2e-quit-app");
+	},
 });

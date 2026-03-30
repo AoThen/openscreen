@@ -411,7 +411,10 @@ app.on("second-instance", () => {
 // On macOS, applications and their menu bar stay active until the user quits
 // explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
-	// Keep app running (macOS behavior)
+	// Keep app running only on macOS
+	if (process.platform !== "darwin") {
+		app.quit();
+	}
 });
 
 app.on("activate", () => {

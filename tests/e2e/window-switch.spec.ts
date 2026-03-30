@@ -20,6 +20,34 @@ function setupConsoleLogging(app: Electron.Application, prefix: string) {
 	});
 }
 
+// Helper to cleanly quit the app in E2E tests
+async function quitApp(app: Electron.Application) {
+	try {
+		// Try to use the E2E quit handler first
+		const mainWindow = await app.firstWindow({ timeout: 5000 }).catch(() => null);
+		if (mainWindow) {
+			await mainWindow
+				.evaluate(async () => {
+					try {
+						await (
+							window as unknown as { electronAPI: { e2eQuitApp: () => Promise<void> } }
+						).electronAPI.e2eQuitApp();
+					} catch {
+						// Ignore if handler doesn't exist
+					}
+				})
+				.catch(() => {
+					// Ignore evaluation errors during quit
+				});
+		}
+	} catch {
+		// Ignore errors in quit process
+	}
+	// Force close after a short delay
+	await new Promise((resolve) => setTimeout(resolve, 500));
+	await app.close();
+}
+
 test.describe("Window Management", () => {
 	test("launches with HUD overlay window", async () => {
 		console.log(`[TEST] Main JS: ${MAIN_JS}`);
@@ -67,7 +95,7 @@ test.describe("Window Management", () => {
 			console.log("[TEST] ✅ HUD window test passed!");
 		} finally {
 			console.log("[TEST] Cleaning up...");
-			await app.close();
+			await quitApp(app);
 		}
 	});
 
@@ -140,7 +168,7 @@ test.describe("Window Management", () => {
 			console.log("[TEST] ✅ Window switch test passed!");
 		} finally {
 			console.log("[TEST] Cleaning up...");
-			await app.close();
+			await quitApp(app);
 		}
 	});
 
@@ -201,7 +229,7 @@ test.describe("Window Management", () => {
 			console.log("[TEST] ✅ Source selector test passed!");
 		} finally {
 			console.log("[TEST] Cleaning up...");
-			await app.close();
+			await quitApp(app);
 		}
 	});
 
@@ -257,7 +285,7 @@ test.describe("Window Management", () => {
 			console.log("[TEST] ✅ HUD hide test passed!");
 		} finally {
 			console.log("[TEST] Cleaning up...");
-			await app.close();
+			await quitApp(app);
 		}
 	});
 
@@ -323,7 +351,7 @@ test.describe("Window Management", () => {
 			console.log("[TEST] ✅ Window lifecycle test passed!");
 		} finally {
 			console.log("[TEST] Cleaning up...");
-			await app.close();
+			await quitApp(app);
 		}
 	});
 });

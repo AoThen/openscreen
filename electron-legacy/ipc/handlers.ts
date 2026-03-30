@@ -901,4 +901,15 @@ export function registerIpcHandlers(
 		}
 		return true;
 	});
+
+	// E2E test helper to quit the app cleanly
+	ipcMain.handle("e2e-quit-app", async () => {
+		if (process.env["HEADLESS"] === "true") {
+			setImmediate(() => {
+				app.quit();
+			});
+			return { success: true };
+		}
+		return { success: false, message: "Can only quit in HEADLESS mode" };
+	});
 }
