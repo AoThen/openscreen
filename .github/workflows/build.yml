@@ -27,19 +27,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-      - name: Upload Windows installer
-        uses: actions/upload-artifact@v7
-        with:
-          name: windows-installer
-          path: release/**/*.exe
-          retention-days: 30
+      # - name: Upload Windows installer
+      #   uses: actions/upload-artifact@v7
+      #   with:
+      #     name: windows-installer
+      #     path: release/**/*.exe
+      #     retention-days: 30
 
       - name: Upload Windows portable
         uses: actions/upload-artifact@v7
         with:
           name: windows-portable
           path: release/**/*.zip
-          retention-days: 30
+          retention-days: 7
 
   # build-macos:
   #   runs-on: macos-latest
