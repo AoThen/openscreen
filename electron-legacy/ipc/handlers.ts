@@ -318,20 +318,34 @@ export function registerIpcHandlers(
 				// Use setImmediate to schedule window operations after IPC response.
 				resolve();
 				setImmediate(() => {
-					// Check again in case window was already closed
-					if (!mainWin.isDestroyed()) {
-						mainWin.once("closed", () => {
+					try {
+						// Check again in case window was already closed
+						if (!mainWin.isDestroyed()) {
+							mainWin.once("closed", () => {
+								const newWin = createEditorWindow();
+								if (setMainWindow) {
+									setMainWindow(newWin);
+								}
+							});
+							mainWin.close();
+						} else {
+							// Window was already closed, just create editor
 							const newWin = createEditorWindow();
 							if (setMainWindow) {
 								setMainWindow(newWin);
 							}
-						});
-						mainWin.close();
-					} else {
-						// Window was already closed, just create editor
-						const newWin = createEditorWindow();
-						if (setMainWindow) {
-							setMainWindow(newWin);
+						}
+					} catch (error) {
+						// Window was destroyed during the operation.
+						// This can happen due to race conditions when recording ends.
+						console.warn("Error during window switch, creating editor anyway:", error);
+						try {
+							const newWin = createEditorWindow();
+							if (setMainWindow) {
+								setMainWindow(newWin);
+							}
+						} catch (createError) {
+							console.error("Failed to create editor window:", createError);
 						}
 					}
 				});

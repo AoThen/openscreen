@@ -93,13 +93,22 @@ function createWindow() {
 }
 
 function showMainWindow() {
+	// Don't try to show window during switching
+	if (isWindowSwitching) return;
+
 	if (mainWindow && !mainWindow.isDestroyed()) {
-		if (mainWindow.isMinimized()) {
-			mainWindow.restore();
+		try {
+			if (mainWindow.isMinimized()) {
+				mainWindow.restore();
+			}
+			mainWindow.show();
+			mainWindow.focus();
+			return;
+		} catch (error) {
+			// Window was destroyed between the isDestroyed() check and the operation.
+			// This can happen during window switching when recording ends.
+			console.warn("Window operation failed, window may have been destroyed:", error);
 		}
-		mainWindow.show();
-		mainWindow.focus();
-		return;
 	}
 
 	createWindow();
@@ -213,10 +222,14 @@ function setupApplicationMenu() {
 function createTray() {
 	tray = new Tray(defaultTrayIcon);
 	tray.on("click", () => {
-		showMainWindow();
+		if (!isWindowSwitching) {
+			showMainWindow();
+		}
 	});
 	tray.on("double-click", () => {
-		showMainWindow();
+		if (!isWindowSwitching) {
+			showMainWindow();
+		}
 	});
 }
 
@@ -230,6 +243,9 @@ function getTrayIcon(filename: string) {
 		});
 }
 
+// Flag to prevent window operations during switching
+let isWindowSwitching = false;
+
 function updateTrayMenu(recording: boolean = false) {
 	if (!tray) {
 		// Tray not available (HEADLESS mode or creation failed)
@@ -242,8 +258,13 @@ function updateTrayMenu(recording: boolean = false) {
 				{
 					label: mainT("common", "actions.stopRecording") || "Stop Recording",
 					click: () => {
+						if (isWindowSwitching) return;
 						if (mainWindow && !mainWindow.isDestroyed()) {
-							mainWindow.webContents.send("stop-recording-from-tray");
+							try {
+								mainWindow.webContents.send("stop-recording-from-tray");
+							} catch (error) {
+								console.warn("Failed to send stop-recording signal:", error);
+							}
 						}
 					},
 				},
@@ -252,7 +273,9 @@ function updateTrayMenu(recording: boolean = false) {
 				{
 					label: mainT("common", "actions.open") || "Open",
 					click: () => {
-						showMainWindow();
+						if (!isWindowSwitching) {
+							showMainWindow();
+						}
 					},
 				},
 				{
@@ -290,6 +313,8 @@ function forceCloseEditorWindow(windowToClose: BrowserWindow | null) {
 }
 
 function createEditorWindowWrapper(): BrowserWindow {
+	isWindowSwitching = true;
+
 	if (mainWindow) {
 		isForceClosing = true;
 		const oldWindow = mainWindow;
@@ -303,6 +328,16 @@ function createEditorWindowWrapper(): BrowserWindow {
 	}
 	mainWindow = createEditorWindow();
 	editorHasUnsavedChanges = false;
+
+	// Reset switching flag after window is ready
+	mainWindow.webContents.once("did-finish-load", () => {
+		isWindowSwitching = false;
+	});
+
+	// Also reset on close in case window is closed before load
+	mainWindow.once("closed", () => {
+		isWindowSwitching = false;
+	});
 
 	mainWindow.on("close", (event) => {
 		if (isForceClosing || !editorHasUnsavedChanges) return;
@@ -367,7 +402,9 @@ function createSourceSelectorWindowWrapper() {
 // Handle second instance - focus existing window when user tries to launch another instance
 app.on("second-instance", () => {
 	// Someone tried to run a second instance, focus the existing window
-	showMainWindow();
+	if (!isWindowSwitching) {
+		showMainWindow();
+	}
 });
 
 // On macOS, applications and their menu bar stay active until the user quits

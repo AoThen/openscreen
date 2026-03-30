@@ -56,7 +56,13 @@ export function createHudOverlayWindow(): BrowserWindow {
 	});
 
 	win.webContents.on("did-finish-load", () => {
-		win?.webContents.send("main-process-message", new Date().toLocaleString());
+		if (win?.isDestroyed()) return;
+		try {
+			win?.webContents.send("main-process-message", new Date().toLocaleString());
+		} catch (error) {
+			// Window may have been destroyed during load
+			console.warn("Failed to send main-process-message:", error);
+		}
 	});
 
 	if (VITE_DEV_SERVER_URL) {
@@ -105,7 +111,13 @@ export function createEditorWindow(): BrowserWindow {
 	}
 
 	win.webContents.on("did-finish-load", () => {
-		win?.webContents.send("main-process-message", new Date().toLocaleString());
+		if (win?.isDestroyed()) return;
+		try {
+			win?.webContents.send("main-process-message", new Date().toLocaleString());
+		} catch (error) {
+			// Window may have been destroyed during load
+			console.warn("Failed to send main-process-message:", error);
+		}
 	});
 
 	if (VITE_DEV_SERVER_URL) {
