@@ -43,7 +43,7 @@ export function createHudOverlayWindow(): BrowserWindow {
 		alwaysOnTop: true,
 		skipTaskbar: true,
 		hasShadow: false,
-		show: !HEADLESS,
+		show: true,
 		// Set a background color for headless mode
 		backgroundColor: HEADLESS ? "#1a1a1c" : undefined,
 		webPreferences: {
@@ -94,7 +94,7 @@ export function createEditorWindow(): BrowserWindow {
 		skipTaskbar: false,
 		title: "OpenScreen",
 		backgroundColor: "#000000",
-		show: !HEADLESS,
+		show: true,
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
@@ -158,7 +158,7 @@ export function createSourceSelectorWindow(): BrowserWindow {
 		transparent: !HEADLESS,
 		// Set a background color for headless mode
 		backgroundColor: HEADLESS ? "#1a1a1c" : "#00000000",
-		show: !HEADLESS,
+		show: true,
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,

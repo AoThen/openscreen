@@ -18,8 +18,12 @@ import { createEditorWindow, createHudOverlayWindow, createSourceSelectorWindow 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// HEADLESS mode is used in CI environments where we don't need tray functionality
+const HEADLESS = process.env["HEADLESS"] === "true";
+
 // Single instance lock - ensure only one instance of the app can run
-const gotTheLock = app.requestSingleInstanceLock();
+// Skip in HEADLESS/E2E test environments to avoid lock file conflicts
+const gotTheLock = HEADLESS ? true : app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
 	// Another instance is already running, quit this one
@@ -27,9 +31,6 @@ if (!gotTheLock) {
 	// Exit immediately to prevent any further initialization
 	process.exit(0);
 }
-
-// HEADLESS mode is used in CI environments where we don't need tray functionality
-const HEADLESS = process.env["HEADLESS"] === "true";
 
 // Performance optimizations - hardware acceleration and memory settings
 // Skip GPU-related optimizations in headless/CI environments
