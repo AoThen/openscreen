@@ -28,9 +28,15 @@ if (!gotTheLock) {
 	process.exit(0);
 }
 
+// HEADLESS mode is used in CI environments where we don't need tray functionality
+const HEADLESS = process.env["HEADLESS"] === "true";
+
 // Performance optimizations - hardware acceleration and memory settings
-app.commandLine.appendSwitch("enable-gpu-rasterization");
-app.commandLine.appendSwitch("enable-zero-copy");
+// Skip GPU-related optimizations in headless/CI environments
+if (!HEADLESS) {
+	app.commandLine.appendSwitch("enable-gpu-rasterization");
+	app.commandLine.appendSwitch("enable-zero-copy");
+}
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
 
 // Use Screen & System Audio Recording permissions instead of CoreAudio Tap API on macOS.
@@ -377,9 +383,6 @@ app.on("activate", () => {
 		createWindow();
 	}
 });
-
-// HEADLESS mode is used in CI environments where we don't need tray functionality
-const HEADLESS = process.env["HEADLESS"] === "true";
 
 // Register all IPC handlers when app is ready
 app.whenReady().then(async () => {

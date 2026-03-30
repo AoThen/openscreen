@@ -99,8 +99,10 @@ export function createEditorWindow(): BrowserWindow {
 		},
 	});
 
-	// Maximize the window by default
-	win.maximize();
+	// Maximize the window by default (skip in headless mode to avoid potential issues)
+	if (!HEADLESS) {
+		win.maximize();
+	}
 
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", new Date().toLocaleString());
@@ -118,7 +120,16 @@ export function createEditorWindow(): BrowserWindow {
 }
 
 export function createSourceSelectorWindow(): BrowserWindow {
-	const workAreaSize = screen.getPrimaryDisplay()?.workAreaSize ?? { width: 1920, height: 1080 };
+	// Use try-catch for screen operations in case they fail in headless environments
+	let workAreaSize = { width: 1920, height: 1080 };
+	try {
+		const primaryDisplay = screen.getPrimaryDisplay();
+		if (primaryDisplay?.workAreaSize) {
+			workAreaSize = primaryDisplay.workAreaSize;
+		}
+	} catch (error) {
+		console.error("Failed to get primary display, using defaults:", error);
+	}
 	const { width, height } = workAreaSize;
 
 	const win = new BrowserWindow({
@@ -131,8 +142,11 @@ export function createSourceSelectorWindow(): BrowserWindow {
 		frame: false,
 		resizable: false,
 		alwaysOnTop: true,
-		transparent: true,
-		backgroundColor: "#00000000",
+		// Transparent windows may not work in headless/CI environments
+		transparent: !HEADLESS,
+		// Set a background color for headless mode
+		backgroundColor: HEADLESS ? "#1a1a1c" : "#00000000",
+		show: !HEADLESS,
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
