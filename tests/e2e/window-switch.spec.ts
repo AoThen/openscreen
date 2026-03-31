@@ -23,7 +23,7 @@ function setupConsoleLogging(app: Electron.Application, prefix: string) {
 // Helper to cleanly quit the app in E2E tests
 async function quitApp(app: Electron.Application) {
 	try {
-		// Try to use the E2E quit handler first
+		// Try to use the E2E quit handler first via IPC
 		const mainWindow = await app.firstWindow({ timeout: 5000 }).catch(() => null);
 		if (mainWindow) {
 			await mainWindow
@@ -45,7 +45,11 @@ async function quitApp(app: Electron.Application) {
 	}
 	// Force close after a short delay
 	await new Promise((resolve) => setTimeout(resolve, 500));
-	await app.close();
+	// Use app.evaluate to quit the Electron app properly
+	// app.close() only closes windows, not the process
+	await app.evaluate(async ({ app }) => {
+		app.quit();
+	});
 }
 
 test.describe("Window Management", () => {

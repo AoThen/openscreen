@@ -94,7 +94,7 @@ export function createEditorWindow(): BrowserWindow {
 		skipTaskbar: false,
 		title: "OpenScreen",
 		backgroundColor: "#000000",
-		show: true,
+		show: !HEADLESS,
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
@@ -102,6 +102,8 @@ export function createEditorWindow(): BrowserWindow {
 			webSecurity: false,
 			backgroundThrottling: false,
 			spellcheck: false,
+			// Allow file:// URLs for loading local video files
+			allowRunningInsecureContent: true,
 		},
 	});
 

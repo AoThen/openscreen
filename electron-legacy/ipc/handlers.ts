@@ -311,52 +311,32 @@ export function registerIpcHandlers(
 
 	ipcMain.handle("switch-to-editor", () => {
 		return new Promise<void>((resolve) => {
-			const mainWin = getMainWindow();
-			if (mainWin && !mainWin.isDestroyed()) {
-				// CRITICAL: Resolve BEFORE closing the window, otherwise the renderer
-				// process gets terminated before the IPC response can be sent.
-				// Use setImmediate to schedule window operations after IPC response.
-				resolve();
-				setImmediate(() => {
-					try {
-						// Check again in case window was already closed
-						if (!mainWin.isDestroyed()) {
-							mainWin.once("closed", () => {
-								const newWin = createEditorWindow();
-								if (setMainWindow) {
-									setMainWindow(newWin);
-								}
-							});
-							mainWin.close();
-						} else {
-							// Window was already closed, just create editor
-							const newWin = createEditorWindow();
-							if (setMainWindow) {
-								setMainWindow(newWin);
-							}
-						}
-					} catch (error) {
-						// Window was destroyed during the operation.
-						// This can happen due to race conditions when recording ends.
-						console.warn("Error during window switch, creating editor anyway:", error);
-						try {
-							const newWin = createEditorWindow();
-							if (setMainWindow) {
-								setMainWindow(newWin);
-							}
-						} catch (createError) {
-							console.error("Failed to create editor window:", createError);
-						}
+			// CRITICAL: Resolve BEFORE closing the window, otherwise the renderer
+			// process gets terminated before the IPC response can be sent.
+			resolve();
+
+			setImmediate(() => {
+				try {
+					// createEditorWindow is actually createEditorWindowWrapper which handles
+					// closing the old window and creating the new one
+					const newWin = createEditorWindow();
+					if (setMainWindow) {
+						setMainWindow(newWin);
 					}
-				});
-			} else {
-				// No existing window, create directly
-				const newWin = createEditorWindow();
-				if (setMainWindow) {
-					setMainWindow(newWin);
+				} catch (error) {
+					// Window was destroyed during the operation.
+					// This can happen due to race conditions when recording ends.
+					console.warn("Error during window switch, creating editor anyway:", error);
+					try {
+						const newWin = createEditorWindow();
+						if (setMainWindow) {
+							setMainWindow(newWin);
+						}
+					} catch (createError) {
+						console.error("Failed to create editor window:", createError);
+					}
 				}
-				resolve();
-			}
+			});
 		});
 	});
 
