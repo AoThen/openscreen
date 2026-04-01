@@ -7,17 +7,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 const MAIN_JS = path.join(ROOT, "dist-electron-legacy/main.js");
 
-// 查找 recordingtest 目录中的录制文件
-const RECORDING_TEST_DIR = path.join(ROOT, "recordingtest");
-const WEBM_FILE = fs
-	.readdirSync(RECORDING_TEST_DIR)
-	.find((f) => f.endsWith(".webm") && !f.includes(".cursor.json"));
+// Use sample.webm from fixtures directory for E2E tests
+const TEST_VIDEO = path.join(ROOT, "fixtures", "sample.webm");
 
-if (!WEBM_FILE) {
-	throw new Error(`No .webm file found in ${RECORDING_TEST_DIR}`);
+if (!fs.existsSync(TEST_VIDEO)) {
+	throw new Error(`Test video not found: ${TEST_VIDEO}`);
 }
 
-const TEST_VIDEO = path.join(RECORDING_TEST_DIR, WEBM_FILE);
 console.log(`[TEST] Using recording: ${TEST_VIDEO}`);
 
 // Helper to capture console logs from renderer
