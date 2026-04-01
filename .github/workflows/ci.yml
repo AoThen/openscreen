@@ -71,7 +71,7 @@ jobs:
           NODE_ENV: production
 
   e2e-electron:
-    name: E2E Tests (Electron Legacy)
+    name: E2E Tests (Electron Legacy - Linux)
     runs-on: ubuntu-latest
     needs: [electron-build]
     steps:
@@ -84,12 +84,44 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build-vite
       - run: xvfb-run --auto-servernum npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - name: Upload logs on failure
         if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-electron
-          path: test-results/
+          name: playwright-logs-linux
+          path: |
+            test-results/**/*.log
+            test-results/**/stderr.txt
+            test-results/**/stdout.txt
           retention-days: 7
+          include-hidden-files: false
+
+  e2e-electron-windows:
+    name: E2E Tests (Electron Legacy - Windows)
+    runs-on: windows-latest
+    needs: [electron-build]
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run build-vite
+      - name: Run E2E tests (Annotation & Export workflow)
+        run: npm run test:e2e -- --grep "Annotation"
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-logs-windows
+          path: |
+            test-results/**/*.log
+            test-results/**/stderr.txt
+            test-results/**/stdout.txt
+          retention-days: 7
+          include-hidden-files: false
 
   # ============ Tauri (暂时禁用) ============
   # tauri-check:
