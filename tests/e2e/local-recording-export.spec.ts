@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test } from "@playwright/test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, "..");
+const ROOT = path.join(__dirname, "../..");
 const MAIN_JS = path.join(ROOT, "dist-electron-legacy/main.js");
 
 // Use sample.webm from fixtures directory for E2E tests
