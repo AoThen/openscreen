@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "media": {
+    "screenVideoPath": "C:\\Users\\Leco\\AppData\\Roaming\\openscreen\\recordings\\recording-1775034712489.webm"
+  },
+  "editor": {
+    "wallpaper": "/wallpapers/wallpaper1.jpg",
+    "shadowIntensity": 0,
+    "showBlur": false,
+    "motionBlurAmount": 0,
+    "borderRadius": 0,
+    "padding": 50,
+    "cropRegion": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "zoomRegions": [],
+    "trimRegions": [],
+    "speedRegions": [],
+    "annotationRegions": [
+      {
+        "id": "annotation-1",
+        "startMs": 48,
+        "endMs": 1048,
+        "type": "text",
+        "content": "Enter text...",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "size": {
+          "width": 30,
+          "height": 20
+        },
+        "style": {
+          "color": "#ffffff",
+          "backgroundColor": "transparent",
+          "fontSize": 32,
+          "fontFamily": "Inter",
+          "fontWeight": "bold",
+          "fontStyle": "normal",
+          "textDecoration": "none",
+          "textAlign": "center"
+        },
+        "zIndex": 1
+      }
+    ],
+    "aspectRatio": "16:9",
+    "webcamLayoutPreset": "picture-in-picture",
+    "webcamPosition": null,
+    "exportQuality": "good",
+    "exportFormat": "mp4",
+    "gifFrameRate": 15,
+    "gifLoop": true,
+    "gifSizePreset": "medium"
+  }
+}

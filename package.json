@@ -26,6 +26,7 @@
 		"build-vite": "tsc && vite build",
 		"test:e2e": "playwright test",
 		"test:e2e:legacy": "ELECTRON_RUN_AS_NODE=1 playwright test",
+		"test:e2e:local": "playwright test tests/e2e/local-recording-export.spec.ts",
 		"prepare": "husky",
 		"tauri": "tauri",
 		"tauri:dev": "tauri dev",

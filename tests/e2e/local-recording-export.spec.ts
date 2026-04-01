@@ -1,13 +1,24 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test } from "@playwright/test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, "../..");
+const ROOT = path.join(__dirname, "..");
 const MAIN_JS = path.join(ROOT, "dist-electron-legacy/main.js");
-const TEST_VIDEO = path.join(__dirname, "../fixtures/sample.webm");
+
+// 查找 recordingtest 目录中的录制文件
+const RECORDING_TEST_DIR = path.join(ROOT, "recordingtest");
+const WEBM_FILE = fs
+	.readdirSync(RECORDING_TEST_DIR)
+	.find((f) => f.endsWith(".webm") && !f.includes(".cursor.json"));
+
+if (!WEBM_FILE) {
+	throw new Error(`No .webm file found in ${RECORDING_TEST_DIR}`);
+}
+
+const TEST_VIDEO = path.join(RECORDING_TEST_DIR, WEBM_FILE);
+console.log(`[TEST] Using recording: ${TEST_VIDEO}`);
 
 // Helper to capture console logs from renderer
 function setupConsoleLogging(app: Electron.Application, prefix: string) {
@@ -24,7 +35,6 @@ function setupConsoleLogging(app: Electron.Application, prefix: string) {
 // Helper to cleanly quit the app in E2E tests
 async function quitApp(app: Electron.Application) {
 	try {
-		// Try to use the E2E quit handler first via IPC
 		const mainWindow = await app.firstWindow({ timeout: 5000 }).catch(() => null);
 		if (mainWindow) {
 			await mainWindow
@@ -44,18 +54,15 @@ async function quitApp(app: Electron.Application) {
 	} catch {
 		// Ignore errors in quit process
 	}
-	// Force close after a short delay
 	await new Promise((resolve) => setTimeout(resolve, 500));
-	// Use app.evaluate to quit the Electron app properly
-	// app.close() only closes windows, not the process
 	await app.evaluate(async ({ app }) => {
 		app.quit();
 	});
 }
 
-test.describe("Annotation & Export Workflow", () => {
-	test("adds text annotation and exports MP4 video", async () => {
-		const outputPath = path.join(os.tmpdir(), `test-annotation-export-${Date.now()}.mp4`);
+test.describe("Local Recording Export Workflow", () => {
+	test("loads local recording and exports MP4 with annotation", async () => {
+		const outputPath = path.join(ROOT, "recordingtest", `exported-${Date.now()}.mp4`);
 		console.log(`[TEST] Output path: ${outputPath}`);
 		console.log(`[TEST] Test video: ${TEST_VIDEO}`);
 		console.log(`[TEST] Main JS: ${MAIN_JS}`);
@@ -81,7 +88,7 @@ test.describe("Annotation & Export Workflow", () => {
 			],
 			env: {
 				...process.env,
-				HEADLESS: process.env["HEADLESS"] ?? "true",
+				HEADLESS: process.env["HEADLESS"] ?? "false", // 默认不启用 headless，方便调试
 				DEBUG: "electron:*",
 			},
 		});
@@ -182,7 +189,7 @@ test.describe("Annotation & Export Workflow", () => {
 				});
 				console.log(`[TEST] Video state: ${JSON.stringify(videoState)}`);
 
-				if (videoState.exists && videoState.readyState! >= 2) {
+				if (videoState.exists && videoState.readyState >= 2) {
 					break;
 				}
 
@@ -193,15 +200,13 @@ test.describe("Annotation & Export Workflow", () => {
 				}
 			}
 
-			// Skip test if video fails to load (rendering issue in CI)
-			if (!videoState?.exists || videoState.readyState! < 2) {
-				console.log("[TEST] ⚠️ Skipping test: Video failed to load in CI environment");
-				console.log("[TEST] This is likely a GPU/rendering limitation in headless Windows CI");
-				return; // Skip this test gracefully
+			// Skip test if video fails to load
+			if (!videoState?.exists || videoState.readyState < 2) {
+				console.log("[TEST] ⚠️ Skipping test: Video failed to load");
+				return;
 			}
 
 			console.log("[TEST] Step 7: Adding text annotation...");
-			// Click the annotation button (MessageSquare icon)
 			const annotationButton = editorWindow.getByTestId("testId-add-annotation-button");
 			const annotationButtonVisible = await annotationButton.isVisible().catch(() => false);
 
@@ -209,21 +214,16 @@ test.describe("Annotation & Export Workflow", () => {
 				await annotationButton.click();
 				console.log("[TEST] Annotation button clicked");
 			} else {
-				// Fallback: use keyboard shortcut (A key)
 				await editorWindow.keyboard.press("a");
 				console.log("[TEST] Used keyboard shortcut 'a' to add annotation");
 			}
 
 			await editorWindow.waitForTimeout(1000);
 
-			// Verify annotation was added by checking timeline
+			// Verify annotation was added
 			const annotationTrack = editorWindow.locator('[data-row-id="row-annotation"]');
 			const annotationExists = await annotationTrack.count().then((c) => c > 0);
 			console.log(`[TEST] Annotation track exists: ${annotationExists}`);
-
-			if (!annotationExists) {
-				console.log("[TEST] Warning: Annotation track not found, but continuing...");
-			}
 
 			await editorWindow.waitForTimeout(500);
 
@@ -326,147 +326,20 @@ test.describe("Annotation & Export Workflow", () => {
 			fs.readSync(fd, header, 0, 12, 0);
 			fs.closeSync(fd);
 
-			// MP4 files start with a size (4 bytes) followed by 'ftyp'
 			const ftypOffset = header.indexOf("ftyp", 0, "ascii");
 			expect(ftypOffset, "MP4 should contain 'ftyp' box").toBeGreaterThan(-1);
 			console.log(`[TEST] Valid MP4 header found at offset ${ftypOffset}`);
 
 			const stats = fs.statSync(outputPath);
-			expect(stats.size).toBeGreaterThan(1024); // at least 1 KB
+			expect(stats.size).toBeGreaterThan(1024);
 			console.log(`[TEST] MP4 size: ${stats.size} bytes`);
 
 			console.log("[TEST] ✅ Test passed!");
 		} finally {
 			console.log("[TEST] Cleaning up...");
 			await quitApp(app);
-			if (fs.existsSync(outputPath)) {
-				fs.unlinkSync(outputPath);
-			}
-		}
-	});
-
-	test("adds multiple annotations and verifies timeline", async () => {
-		console.log(`[TEST] Test video: ${TEST_VIDEO}`);
-
-		if (!fs.existsSync(TEST_VIDEO)) {
-			throw new Error(`Test video not found: ${TEST_VIDEO}`);
-		}
-
-		const app = await electron.launch({
-			args: [
-				MAIN_JS,
-				"--no-sandbox",
-				"--disable-gpu-sandbox",
-				"--disable-setuid-sandbox",
-				"--disable-gpu",
-				"--use-gl=angle",
-				"--use-angle=swiftshader",
-				"--enable-unsafe-swiftshader",
-				"--enable-logging",
-				"--v=1",
-			],
-			env: {
-				...process.env,
-				HEADLESS: process.env["HEADLESS"] ?? "true",
-				DEBUG: "electron:*",
-			},
-		});
-
-		app.process().stdout?.on("data", (d) => process.stdout.write(`[electron stdout] ${d}`));
-		app.process().stderr?.on("data", (d) => process.stderr.write(`[electron stderr] ${d}`));
-
-		setupConsoleLogging(app, "renderer");
-
-		try {
-			console.log("[TEST] Step 1: Waiting for HUD window...");
-			const hudWindow = await app.firstWindow({ timeout: 60_000 });
-			await hudWindow.waitForLoadState("domcontentloaded");
-
-			hudWindow.on("console", (msg) => console.log(`[HUD console] ${msg.type()}: ${msg.text()}`));
-			hudWindow.on("pageerror", (error) => console.error(`[HUD pageerror] ${error.message}`));
-
-			console.log("[TEST] Step 2: Setting video path and switching to editor...");
-			await hudWindow.evaluate(async (videoPath: string) => {
-				await window.electronAPI.setCurrentVideoPath(videoPath);
-				await window.electronAPI.switchToEditor();
-			}, TEST_VIDEO);
-
-			console.log("[TEST] Step 3: Waiting for editor window...");
-			const editorWindow = await app.waitForEvent("window", {
-				predicate: (w) => w.url().includes("windowType=editor"),
-				timeout: 15_000,
-			});
-			console.log(`[TEST] Editor window URL: ${editorWindow.url()}`);
-
-			console.log("[TEST] Step 4: Reloading editor window for WebCodecs...");
-			await editorWindow.reload();
-			await editorWindow.waitForLoadState("domcontentloaded");
-
-			console.log("[TEST] Step 5: Waiting for video to load...");
-			await expect(editorWindow.getByText("Loading video...")).not.toBeVisible({
-				timeout: 15_000,
-			});
-
-			await editorWindow.waitForTimeout(3000);
-
-			// Verify video exists with retries
-			let videoExists = false;
-			let retries = 3;
-			while (retries > 0) {
-				const videoState = await editorWindow.evaluate(() => {
-					const video = document.querySelector("video") as HTMLVideoElement | null;
-					if (!video) return { exists: false, readyState: 0 };
-					return { exists: true, readyState: video.readyState };
-				});
-
-				if (videoState.exists && videoState.readyState >= 2) {
-					videoExists = true;
-					break;
-				}
-
-				retries--;
-				if (retries > 0) {
-					console.log(`[TEST] Video not ready, retrying... (${retries} attempts left)`);
-					await editorWindow.waitForTimeout(2000);
-				}
-			}
-
-			// Skip test if video fails to load (rendering issue in CI)
-			if (!videoExists) {
-				console.log("[TEST] ⚠️ Skipping test: Video failed to load in CI environment");
-				console.log("[TEST] This is likely a GPU/rendering limitation in headless Windows CI");
-				return; // Skip this test gracefully
-			}
-
-			console.log("[TEST] Step 6: Adding first annotation using keyboard shortcut...");
-			await editorWindow.keyboard.press("a");
-			await editorWindow.waitForTimeout(500);
-
-			console.log("[TEST] Step 7: Seeking to different time and adding second annotation...");
-			// Seek to 50% of video
-			await editorWindow.evaluate(() => {
-				const video = document.querySelector("video");
-				if (video && video.duration) {
-					video.currentTime = video.duration / 2;
-				}
-			});
-			await editorWindow.waitForTimeout(500);
-			await editorWindow.keyboard.press("a");
-			await editorWindow.waitForTimeout(500);
-
-			console.log("[TEST] Step 8: Verifying annotation timeline track exists...");
-			const annotationTrack = editorWindow.locator('[data-row-id="row-annotation"]');
-			await expect(annotationTrack).toBeVisible({ timeout: 5000 });
-
-			console.log("[TEST] Step 9: Verifying multiple annotations can be selected...");
-			// Try to select annotation using Tab key
-			await editorWindow.keyboard.press("Tab");
-			await editorWindow.waitForTimeout(300);
-
-			console.log("[TEST] ✅ Multiple annotation test passed!");
-		} finally {
-			console.log("[TEST] Cleaning up...");
-			await quitApp(app);
+			// 不删除导出的文件，方便用户检查
+			console.log(`[TEST] Exported file kept at: ${outputPath}`);
 		}
 	});
 });

@@ -109,8 +109,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium
       - run: npm run build-vite
-      - name: Run E2E tests (Annotation & Export workflow)
-        run: npm run test:e2e -- --grep "Annotation"
+      - name: Run E2E tests (All tests)
+        run: npm run test:e2e
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
