@@ -245,7 +245,18 @@ export function SettingsPanel({
 				const resolved = await Promise.all(WALLPAPER_RELATIVE.map((p) => getAssetPath(p)));
 				if (mounted) setWallpaperPaths(resolved);
 			} catch (_err) {
-				if (mounted) setWallpaperPaths(WALLPAPER_RELATIVE.map((p) => `/${p}`));
+				// Fallback: use file:// URLs based on current location for each wallpaper
+				if (mounted && window.location && window.location.pathname) {
+					const basePath = window.location.pathname.substring(
+						0,
+						window.location.pathname.lastIndexOf("/"),
+					);
+					setWallpaperPaths(
+						WALLPAPER_RELATIVE.map((p) => `file://${basePath}/${p.replace(/^\//, "")}`),
+					);
+				} else {
+					setWallpaperPaths(WALLPAPER_RELATIVE.map((p) => `/${p}`));
+				}
 			}
 		})();
 		return () => {

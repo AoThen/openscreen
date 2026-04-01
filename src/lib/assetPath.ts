@@ -31,6 +31,16 @@ export async function getAssetPath(relativePath: string): Promise<string> {
 			if (base) {
 				return new URL(encodedRelativePath, ensureTrailingSlash(base)).toString();
 			}
+
+			// Fallback for file:// protocol: use relative path from index.html
+			// This is needed for E2E tests where getAssetBasePath might not be available
+			if (window.location && window.location.protocol === "file:" && window.location.pathname) {
+				const basePath = window.location.pathname.substring(
+					0,
+					window.location.pathname.lastIndexOf("/"),
+				);
+				return `file://${basePath}/${encodedRelativePath}`;
+			}
 		}
 	} catch {
 		// ignore and use fallback
