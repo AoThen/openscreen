@@ -51,9 +51,13 @@ async function quitApp(app: Electron.Application) {
 		// Ignore errors in quit process
 	}
 	await new Promise((resolve) => setTimeout(resolve, 500));
-	await app.evaluate(async ({ app }) => {
-		app.quit();
-	});
+	try {
+		await app.evaluate(async ({ app }) => {
+			app.quit();
+		});
+	} catch {
+		// Ignore if app already closed
+	}
 }
 
 test.describe("Local Recording Export Workflow", () => {

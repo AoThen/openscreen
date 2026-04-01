@@ -48,9 +48,13 @@ async function quitApp(app: Electron.Application) {
 	await new Promise((resolve) => setTimeout(resolve, 500));
 	// Use app.evaluate to quit the Electron app properly
 	// app.close() only closes windows, not the process
-	await app.evaluate(async ({ app }) => {
-		app.quit();
-	});
+	try {
+		await app.evaluate(async ({ app }) => {
+			app.quit();
+		});
+	} catch {
+		// Ignore if app already closed
+	}
 }
 
 test("exports an MP4 video from a loaded video", async () => {
