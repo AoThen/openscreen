@@ -530,8 +530,10 @@ export function registerIpcHandlers(
 			}
 			// In non-packaged mode (E2E tests, dev builds), use the dist directory
 			// which contains the Vite build output including wasm files from public/
+			// The dist directory is at the project root, not relative to this file
 			const __dirname = path.dirname(fileURLToPath(import.meta.url));
-			const distPath = path.join(__dirname, "..", "dist");
+			// Go up two levels: electron-legacy/ipc/ -> electron-legacy/ -> project root
+			const distPath = path.join(__dirname, "..", "..", "dist");
 			return pathToFileURL(`${distPath}${path.sep}`).toString();
 		} catch (err) {
 			console.error("Failed to resolve asset base path:", err);
