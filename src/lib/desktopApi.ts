@@ -558,9 +558,36 @@ export function getDesktopApiSync(): DesktopApi | null {
 	return null;
 }
 
+// 返回 cleanup 函数的方法列表，这些方法需要同步调用
+const CLEANUP_METHODS = new Set([
+	"onStopRecordingFromTray",
+	"onMenuLoadProject",
+	"onMenuSaveProject",
+	"onMenuSaveProjectAs",
+	"onRequestSaveBeforeClose",
+]);
+
 // 直接导出统一 API（所有调用返回 Promise 以确保类型一致）
+// 但对于返回 cleanup 函数的方法，需要特殊处理
 export const desktopApi = new Proxy({} as DesktopApi, {
 	get(_target, prop: string) {
+		// 对于返回 cleanup 函数的方法，直接调用底层 API（同步）
+		if (CLEANUP_METHODS.has(prop)) {
+			return (...args: unknown[]) => {
+				const api = getDesktopApiSync();
+				// 如果 api 还未初始化，返回一个空的 cleanup 函数
+				if (!api) {
+					// biome-ignore lint/suspicious/noEmptyBlockStatements: intentional empty block
+					return () => {};
+				}
+				const method = (api as unknown as Record<string, unknown>)[prop];
+				if (typeof method === "function") {
+					return (method as (...args: unknown[]) => unknown)(...args);
+				}
+				// biome-ignore lint/suspicious/noEmptyBlockStatements: intentional empty block
+				return () => {};
+			};
+		}
 		// 统一返回异步函数，确保 Electron 和 Tauri 类型一致
 		return async (...args: unknown[]) => {
 			const api = await getDesktopApi();
